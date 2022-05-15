@@ -1,0 +1,48 @@
+name: scraper
+
+on:
+  push:
+    branches:
+      - main
+  
+  schedule:
+    - cron: '0 4 * * 6' # in the midnight Friday to Saturday UTC-4 (Saturday at 04.00 AM UTC)
+  
+  workflow_dispatch:
+
+jobs:
+  scraping-time:
+    runs-on: ubuntu-latest  
+    
+    services:
+      selenium:
+        image: selenium/standalone-chrome:latest
+    
+    env:
+      CRED_PATH: ${{ secrets.CRED_PATH }}
+      SECRET_TOKEN: ${{ secrets.SECRET_TOKEN }}
+      
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      
+      - name: Access
+        run: |
+          mkdir .secrets
+          echo $SECRET_TOKEN > `echo $CRED_PATH`
+          
+      - name: R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: '4.1.1'
+      
+      - name: Install dependency
+        run: sudo apt install libcurl4-openssl-dev
+      
+      - name: Set up renv
+        uses: r-lib/actions/setup-renv@v2
+      
+      - name: Run scraper
+        run: | 
+          Rscript auction.R
+          Rscript sheets.R
