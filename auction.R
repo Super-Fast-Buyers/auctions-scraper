@@ -25,14 +25,15 @@ calendar_list <- paste0(domain_list, "?zaction=USER&zmethod=CALENDAR")
 
 # The days out
 # 0 is today, + is num days of tomorrow, - num days of is yesterday
-gs4_auth(path = Sys.getenv("CRED_PATH"))
-days <- read_sheet(
-  ss = Sys.getenv("SHEETS_ID"), 
-  sheet = "Schedule", 
-  range = "days_out", 
-  col_names = FALSE) %>%
-  as.numeric()
-gs4_deauth()
+days <- -1
+# gs4_auth(path = Sys.getenv("CRED_PATH"))
+# days <- read_sheet(
+#   ss = Sys.getenv("SHEETS_ID"), 
+#   sheet = "Schedule", 
+#   range = "days_out", 
+#   col_names = FALSE) %>%
+#   as.numeric()
+# gs4_deauth()
 
 # Listing pages to be scraped
 message("Constructing the list of pages")
