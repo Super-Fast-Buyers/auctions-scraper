@@ -1,10 +1,6 @@
 name: scraper
 
 on:
-  push:
-    branches:
-      - main
-  
   schedule:
     - cron: '0 4 * * 6' # in the midnight Friday to Saturday UTC-4 (Saturday at 04.00 AM UTC)
   
@@ -40,7 +36,9 @@ jobs:
         run: | 
           echo $SECRET_TOKEN >> $CRED_PATH
           Rscript auction.R
+          rm $CRED_PATH
           
       - name: Commit result
         uses: stefanzweifel/git-auto-commit-action@v4
-      
+        with:
+          file_pattern: "*.rds"
