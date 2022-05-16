@@ -57,7 +57,7 @@ auction <- map(longls, ~{
   message(paste("Get", .x))
   page <- scrape_page(.x)
   np <- n_page(page)
-  if (is.na(np)) np <- 1; message("Forced 1 page")
+  if (is.na(np)) np <- 1; message(paste0("Forced 1 page, np = ", np))
   if (np > 1) page <- scrape_pages(.x, np) else page <- list(page)
   if (str_detect(.x, "myorangeclerk")) auction <- parse_pages_case(page) else {
     auction <- parse_pages(page)
