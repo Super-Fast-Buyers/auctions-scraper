@@ -36,9 +36,11 @@ jobs:
         run: | 
           echo $SECRET_TOKEN >> $CRED_PATH
           Rscript auction.R
+          Rscript sheets.R
           rm $CRED_PATH
           
       - name: Commit result
         uses: stefanzweifel/git-auto-commit-action@v4
         with:
+          commit_message: "Updated: `date +'%a, at %F %H:%M %Z'`"
           file_pattern: "*.rds"

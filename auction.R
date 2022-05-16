@@ -25,15 +25,14 @@ calendar_list <- paste0(domain_list, "?zaction=USER&zmethod=CALENDAR")
 
 # The days out
 # 0 is today, + is num days of tomorrow, - num days of is yesterday
-days <- -1
-# gs4_auth(path = Sys.getenv("CRED_PATH"))
-# days <- read_sheet(
-#   ss = Sys.getenv("SHEETS_ID"), 
-#   sheet = "Schedule", 
-#   range = "days_out", 
-#   col_names = FALSE) %>%
-#   as.numeric()
-# gs4_deauth()
+gs4_auth(path = Sys.getenv("CRED_PATH"))
+days <- read_sheet(
+  ss = Sys.getenv("SHEETS_ID"),
+  sheet = "Schedule",
+  range = "days_out",
+  col_names = FALSE) %>%
+  as.numeric()
+gs4_deauth()
 
 # Listing pages to be scraped
 message("Constructing the list of pages")
@@ -70,8 +69,9 @@ auction_data <- do.call(bind_rows, auction)
 # Reshaping data
 auction_data <- auction_data %>% 
   mutate(state = if_else(str_detect(zip, "^\\w+-\\s"), str_extract(zip, "^\\w+"), NA_character_),
-         zip = if_else(str_detect(zip, "^\\w+-\\s"), str_remove(zip, "^\\w+-\\s"), zip)) %>% 
+         zip = if_else(str_detect(zip, "^\\w+-\\s"), str_remove(zip, "^\\w+-\\s"), zip),
+         state = ifelse(is.na(state), "FL", state)) %>% 
   select(auction_date, judgment_amount, address, city, state, zip) %>% 
-  arrange(auction_data, city, zip)
+  arrange(auction_date, city, zip)
 
 write_rds(auction_data, "auction.rds")
