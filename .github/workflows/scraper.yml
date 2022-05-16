@@ -40,7 +40,7 @@ jobs:
         run: | 
           echo $SECRET_TOKEN >> $CRED_PATH
           Rscript auction.R
-      
+          
       - name: Commit result
-      	uses: stefanzweifel/git-auto-commit-action@v4
+        uses: stefanzweifel/git-auto-commit-action@v4
       
