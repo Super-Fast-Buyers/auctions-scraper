@@ -40,8 +40,14 @@ jobs:
           Rscript sheets.R
           rm $CRED_PATH
           
+      - name: Set today
+        id: set_today
+        run: | 
+          echo "::set-output name=today::$(date +'%a, %F at %H:%M %Z')"
+        
       - name: Commit result
         uses: stefanzweifel/git-auto-commit-action@v4
         with:
-          commit_message: "Updated: `date +'%a, at %F %H:%M %Z'`"
+          commit_message: "Updated: ${{ steps.set_today.outputs.today }}"
           file_pattern: "*.rds"
+          
