@@ -1,5 +1,7 @@
 # Auction Scraping
 
+[![scraper](https://github.com/akherlan/auctions-scraper/actions/workflows/scraper.yml/badge.svg)](https://github.com/akherlan/auctions-scraper/actions/workflows/scraper.yml)
+
 **How is the script work?**
 
 -   Scrape Auctions Waiting section from multiple subdomain of [\*.realforeclose.com](#)
