@@ -33,6 +33,7 @@ jobs:
         env:
           CRED_PATH: ${{ secrets.CRED_PATH }}
           SECRET_TOKEN: ${{ secrets.SECRET_TOKEN }}
+          SHEETS_ID: ${{ secrets.SHEETS_ID }}
         run: | 
           echo $SECRET_TOKEN >> $CRED_PATH
           Rscript auction.R
