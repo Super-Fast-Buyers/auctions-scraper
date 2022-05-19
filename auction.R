@@ -26,12 +26,14 @@ calendar_list <- paste0(domain_list, "?zaction=USER&zmethod=CALENDAR")
 # The days out
 # 0 is today, + is num days of tomorrow, - num days of is yesterday
 gs4_auth(path = Sys.getenv("CRED_PATH"))
-days <- read_sheet(
-  ss = Sys.getenv("SHEETS_ID"),
-  sheet = "Schedule",
-  range = "days_out",
-  col_names = FALSE) %>%
-  as.numeric()
+days <- tryCatch({
+  read_sheet(
+    ss = Sys.getenv("SHEETS_ID"),
+    sheet = "Schedule",
+    range = "days_out",
+    col_names = FALSE) %>%
+    as.numeric()
+}, error = function(e) { 0 })
 gs4_deauth()
 
 # Listing pages to be scraped
@@ -76,3 +78,4 @@ auction_data <- auction_data %>%
 
 write_rds(auction_data, "auction.rds")
 write_csv(auction_data, paste0("history/auction_", Sys.Date(), ".csv"))
+message("Data was saved to history")
