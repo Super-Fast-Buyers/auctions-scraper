@@ -49,5 +49,5 @@ jobs:
         uses: stefanzweifel/git-auto-commit-action@v4
         with:
           commit_message: "Updated: ${{ steps.set_today.outputs.today }}"
-          file_pattern: "*.rds"
+          file_pattern: *.rds history/*.csv
           
