@@ -75,3 +75,4 @@ auction_data <- auction_data %>%
   arrange(auction_date, city, zip)
 
 write_rds(auction_data, "auction.rds")
+write_csv(auction_data, paste0("history/auction_", Sys.Date(), ".csv"))
