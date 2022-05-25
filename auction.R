@@ -69,13 +69,29 @@ auction <- map(longls, ~{
 auction_data <- do.call(bind_rows, auction)
 
 # Reshaping data
+auction_past <- read_rds("auction.rds")
+auction_past <- auction_past %>% 
+  mutate(id = paste(address, city, state, zip, sep = ", "),
+         .keep = "unused", .before = 1) %>% 
+  select(-auction_date, -judgment_amount)
+
 auction_data <- auction_data %>% 
   mutate(state = if_else(str_detect(zip, "^\\w+-\\s"), str_extract(zip, "^\\w+"), NA_character_),
          zip = if_else(str_detect(zip, "^\\w+-\\s"), str_remove(zip, "^\\w+-\\s"), zip),
-         state = ifelse(is.na(state), "FL", state)) %>% 
+         state = ifelse(is.na(state), "FL", state),
+         city = str_squish(city)) %>% 
   select(auction_date, judgment_amount, address, city, state, zip) %>% 
-  arrange(auction_date, city, zip)
+  arrange(auction_date, city, zip) %>% 
+  distinct() %>% 
+  mutate(id = paste(address, city, state, zip, sep = ", ")) %>% 
+  full_join(auction_past, by = "id") %>% 
+  select(-id) %>% 
+  mutate(date_added = if_else(is.na(date_added),
+                              format(Sys.Date(), "%m/%d/%Y"),
+                              date_added)) %>% 
+  filter(date_added == format(Sys.Date(), "%m/%d/%Y"))
 
+# Save data
 write_rds(auction_data, "auction.rds")
 write_csv(auction_data, paste0("history/auction_", Sys.Date(), ".csv"))
 message("Data was saved to history")
