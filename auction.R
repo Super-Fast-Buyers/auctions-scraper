@@ -84,7 +84,7 @@ auction_data <- auction_data %>%
   arrange(auction_date, city, zip) %>% 
   distinct() %>% 
   mutate(id = paste(address, city, state, zip, sep = ", ")) %>% 
-  full_join(auction_past, by = "id") %>% 
+  left_join(auction_past, by = "id") %>% 
   select(-id) %>% 
   mutate(date_added = if_else(is.na(date_added),
                               format(Sys.Date(), "%m/%d/%Y"),
