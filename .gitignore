@@ -50,3 +50,6 @@ rsconnect/
 
 # Secret token
 .secrets/
+
+# Temporary working path
+temp/

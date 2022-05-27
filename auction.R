@@ -88,8 +88,7 @@ auction_data <- auction_data %>%
   select(-id) %>% 
   mutate(date_added = if_else(is.na(date_added),
                               format(Sys.Date(), "%m/%d/%Y"),
-                              date_added)) %>% 
-  filter(date_added == format(Sys.Date(), "%m/%d/%Y"))
+                              date_added))
 
 # Save data
 write_rds(auction_data, "auction.rds")
