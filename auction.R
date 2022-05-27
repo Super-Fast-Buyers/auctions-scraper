@@ -82,13 +82,13 @@ auction_data <- auction_data %>%
          city = str_squish(city)) %>% 
   select(auction_date, judgment_amount, address, city, state, zip) %>% 
   arrange(auction_date, city, zip) %>% 
-  distinct() %>% 
   mutate(id = paste(address, city, state, zip, sep = ", ")) %>% 
   left_join(auction_past, by = "id") %>% 
   select(-id) %>% 
   mutate(date_added = if_else(is.na(date_added),
                               format(Sys.Date(), "%m/%d/%Y"),
-                              date_added))
+                              date_added)) %>% 
+  distinct()
 
 # Save data
 write_rds(auction_data, "auction.rds")
