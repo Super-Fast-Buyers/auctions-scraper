@@ -25,12 +25,10 @@ pull_auction <- function(type) {
   
   # Listing pages to be scraped
   message("Constructing the list of pages")
-  calendar_pages(0)
-  longlist <- map(seq_along(calendar_list)[32:33], ~{
+  longlist <- map(seq_along(calendar_list), ~{
     calendar_url <- paste0(calendar_list[[.x]], calendar_pages(days))
     i <- .x
     day_list <- map(calendar_url, ~{
-      cat(paste(.x, "\n"))
       page <- try(scrape_page(.x))
       Sys.sleep(0.5)
       if (auction_category == "foreclose") {

@@ -50,5 +50,5 @@ jobs:
         uses: stefanzweifel/git-auto-commit-action@v4
         with:
           commit_message: "Updated: ${{ steps.set_today.outputs.today }}"
-          file_pattern: history/*.csv *.rds
+          file_pattern: history/taxdeed/*.csv *.rds
           
