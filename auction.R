@@ -66,32 +66,40 @@ pull_auction <- function(type) {
   # Scraping data
   auction <- map(longlist, ~{
     message(paste("Get", .x))
-    page <- scrape_page(.x)
+    page <- try(scrape_page(.x))
     Sys.sleep(0.5)
     np <- n_page(page)
     if (is.na(np)) { np <- 1; message(paste0("Forced 1 page, np = ", np)) }
-    if (is.numeric(np) & length(np)==0) { page <- scrape_pages(.x); page <- list(page) }
     if (np > 1) page <- scrape_pages(.x, np) else page <- list(page)
-    if (str_detect(.x, "myorangeclerk")) auction <- parse_pages_case(page) else {
+    if (str_detect(.x, "myorangeclerk")) auction <- parse_pages_case(page, type) else {
       auction <- parse_pages(page, type = type)
     }
     return(auction)
   })
   auction_data <- do.call(bind_rows, auction)
   
-  # Reshaping data
+  auction_data <- auction_data %>% 
+    mutate(state = if_else(str_detect(zip, "^\\w+-\\s"), str_extract(zip, "^\\w+"), NA_character_),
+           zip = if_else(str_detect(zip, "^\\w+-\\s"), str_remove(zip, "^\\w+-\\s"), zip),
+           state = ifelse(is.na(state), "FL", state),
+           city = str_squish(city))
+  
+  # Reshaping previous data
   auction_past <- read_rds(paste0(auction_category, ".rds"))
   auction_past <- auction_past %>% 
     mutate(id = paste(address, city, state, zip, sep = ", "),
            .keep = "unused", .before = 1) %>% 
     select(-auction_date, -judgment_amount)
   
+  # Creating data
+  if (auction_category == "foreclose") {
+    auction_data <- auction_data %>% 
+      select(auction_date, judgment_amount, address, city, state, zip)
+  } else { # taxdeed
+    auction_data <- auction_data %>% 
+      select(auction_date, opening_bid, address, city, state, zip)
+  }
   auction_data <- auction_data %>% 
-    mutate(state = if_else(str_detect(zip, "^\\w+-\\s"), str_extract(zip, "^\\w+"), NA_character_),
-           zip = if_else(str_detect(zip, "^\\w+-\\s"), str_remove(zip, "^\\w+-\\s"), zip),
-           state = ifelse(is.na(state), "FL", state),
-           city = str_squish(city)) %>% 
-    select(auction_date, judgment_amount, address, city, state, zip) %>% 
     arrange(auction_date, city, zip) %>% 
     mutate(id = paste(address, city, state, zip, sep = ", ")) %>% 
     left_join(auction_past, by = "id") %>% 
@@ -138,7 +146,7 @@ push_auction <- function(type) {
       "Date Added"
     )
   }
-
+  
   gs4_auth(path = Sys.getenv("CRED_PATH"))
   tryCatch({
     sheet_write(auction_data, Sys.getenv(paste0("SHEETS_", toupper(auctype))), "Raw")
