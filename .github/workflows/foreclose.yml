@@ -1,6 +1,11 @@
-name: scraper
+name: foreclose
 
 on:
+  schedule:
+    - cron: '0 4 * * 2' # in the midnight Monday to Tuesday UTC-4 (Tuesday at 04.00 AM UTC)
+    - cron: '0 4 * * 4' # Thursday
+    - cron: '0 4 * * 6' # Saturday
+  
   workflow_dispatch:
 
 jobs:
@@ -30,11 +35,10 @@ jobs:
         env:
           CRED_PATH: ${{ secrets.CRED_PATH }}
           SECRET_TOKEN: ${{ secrets.SECRET_TOKEN }}
-          SHEETS_ID: ${{ secrets.SHEETS_ID }}
+          SHEETS_FORECLOSE: ${{ secrets.SHEETS_FORECLOSE }}
         run: | 
           echo $SECRET_TOKEN >> $CRED_PATH
-          Rscript auction.R
-          Rscript sheets.R
+          Rscript foreclose.R
           rm $CRED_PATH
           
       - name: Set today
