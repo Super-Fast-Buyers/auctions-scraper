@@ -70,6 +70,7 @@ pull_auction <- function(type) {
     Sys.sleep(0.5)
     np <- n_page(page)
     if (is.na(np)) { np <- 1; message(paste0("Forced 1 page, np = ", np)) }
+    if (is.numeric(np) & length(np)==0) { page <- scrape_pages(.x); page <- list(page) }
     if (np > 1) page <- scrape_pages(.x, np) else page <- list(page)
     if (str_detect(.x, "myorangeclerk")) auction <- parse_pages_case(page) else {
       auction <- parse_pages(page, type = type)
@@ -118,15 +119,26 @@ push_auction <- function(type) {
   
   auctype <- type
   auction_data <- readRDS(paste0(auctype, ".rds"))
-  names(auction_data) <- c(
-    "Auction Date", 
-    "Judgment Amount", 
-    "Address", "City", 
-    "State", 
-    "Zip",
-    "Date Added"
-  )
-  
+  if (type == "foreclose") {
+    names(auction_data) <- c(
+      "Auction Date", 
+      "Judgment Amount", 
+      "Address", "City", 
+      "State", 
+      "Zip",
+      "Date Added"
+    )
+  } else { # taxdeed
+    names(auction_data) <- c(
+      "Auction Date", 
+      "Opening Bid", 
+      "Address", "City", 
+      "State", 
+      "Zip",
+      "Date Added"
+    )
+  }
+
   gs4_auth(path = Sys.getenv("CRED_PATH"))
   tryCatch({
     sheet_write(auction_data, Sys.getenv(paste0("SHEETS_", toupper(auctype))), "Raw")

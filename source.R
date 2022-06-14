@@ -253,12 +253,25 @@ parse_pages_case <- function(page) {
       } else {
         auction_data <- df_tbl %>% 
           dplyr::filter(!is.na(property_address)) %>% 
-          separate(city, into = c("city", "zip"), sep = ", ") %>% 
-          mutate(auction_date = if_else(str_detect(auction_date, "^(\\d{2}/){2}\\d{4}"),
-                                        str_extract(auction_date, "^(\\d{2}/){2}\\d{4}"),
-                                        auction_date)) %>% 
-          rename(judgment_amount = final_judgment_amount,
-                 address = property_address)
+          dplyr::filter(auction_type == type)
+        if (type == "FORCLOSURE") {
+          auction_data <- auction_data %>% 
+            select(auction_date, final_judgment_amount, property_address, city) %>% 
+            separate(city, into = c("city", "zip"), sep = ", ") %>% 
+            mutate(auction_date = if_else(str_detect(auction_date, "^(\\d{2}/){2}\\d{4}"),
+                                          str_extract(auction_date, "^(\\d{2}/){2}\\d{4}"),
+                                          auction_date)) %>% 
+            rename(judgment_amount = final_judgment_amount,
+                   address = property_address)
+        } else { # TAXDEED
+          auction_data <- auction_data %>% 
+            select(auction_date, opening_bid, property_address, city) %>% 
+            separate(city, into = c("city", "zip"), sep = ", ") %>% 
+            mutate(auction_date = if_else(str_detect(auction_date, "^(\\d{2}/){2}\\d{4}"),
+                                          str_extract(auction_date, "^(\\d{2}/){2}\\d{4}"),
+                                          auction_date)) %>% 
+            rename(address = property_address)
+        }
       } # end of address checking
     } # end of auction waiting
     auction_data
