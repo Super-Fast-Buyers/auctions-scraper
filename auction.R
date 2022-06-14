@@ -15,7 +15,7 @@ pull_auction <- function(type) {
   gs4_auth(path = Sys.getenv("CRED_PATH"))
   days <- tryCatch({
     read_sheet(
-      ss = Sys.getenv(paste0("SHEETS_", toupper(type))),
+      ss = Sys.getenv(paste0("SHEETS_", toupper(auction_category))),
       sheet = "Schedule",
       range = "days_out",
       col_names = FALSE) %>%
@@ -71,8 +71,8 @@ pull_auction <- function(type) {
     np <- n_page(page)
     if (is.na(np)) { np <- 1; message(paste0("Forced 1 page, np = ", np)) }
     if (np > 1) page <- scrape_pages(.x, np) else page <- list(page)
-    if (str_detect(.x, "myorangeclerk")) auction <- parse_pages_case(page, type) else {
-      auction <- parse_pages(page, type = type)
+    if (str_detect(.x, "myorangeclerk")) auction <- parse_pages_case(page, auction_category) else {
+      auction <- parse_pages(page, type = auction_category)
     }
     return(auction)
   })
