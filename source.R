@@ -56,7 +56,8 @@ n_page <- function(page) {
 }
 
 # function for scrape monthly auction data
-parse_monthly <- function(day_list) {
+parse_monthly <- function(day_list, type = "foreclose") {
+  if (type == "foreclose") { type <- "FORECLOSURE" } else { type <- "TAXDEED" }
   auction_data <- map(day_list, ~{
     page <- scrape_page(.x)
     # parsing table
@@ -88,7 +89,7 @@ parse_monthly <- function(day_list) {
       } else {
         auction_data <- df_tbl %>% 
           dplyr::filter(!is.na(property_address)) %>% 
-          dplyr::filter(auction_type == "FORECLOSURE") %>% 
+          dplyr::filter(auction_type == type) %>% 
           select(auction_date, final_judgment_amount, property_address, city) %>% 
           separate(city, into = c("city", "state"), sep = ", ") %>% 
           separate(state, into = c("state", "zip"), sep = "- ") %>% 
@@ -109,7 +110,8 @@ parse_monthly <- function(day_list) {
 }
 
 # function for parsing page without next
-parse_page <- function(page) {
+parse_page <- function(page, type = "foreclose") {
+  if (type == "foreclose") { type <- "FORECLOSURE" } else { type <- "TAXDEED" }
   # parsing table
   tbl_data <- page %>% 
     html_element(".Head_W") %>% 
@@ -139,7 +141,7 @@ parse_page <- function(page) {
     } else {
       auction_data <- df_tbl %>% 
         dplyr::filter(!is.na(property_address)) %>% 
-        dplyr::filter(auction_type == "FORECLOSURE") %>% 
+        dplyr::filter(auction_type == type) %>% 
         select(auction_date, final_judgment_amount, property_address, city) %>% 
         separate(city, into = c("city", "zip"), sep = ", ") %>% 
         mutate(auction_date = if_else(str_detect(auction_date, "^(\\d{2}/){2}\\d{4}"),
@@ -153,7 +155,8 @@ parse_page <- function(page) {
 }
 
 # function for parsing page in list
-parse_pages <- function(page) {
+parse_pages <- function(page, type = "foreclose") {
+  if (type == "foreclose") { type <- "FORECLOSURE" } else { type <- "TAXDEED" }
   auction_data <- map(page, ~{
     # parsing table
     tbl_data <- .x %>% 
@@ -186,7 +189,7 @@ parse_pages <- function(page) {
       } else {
         auction_data <- df_tbl %>% 
           dplyr::filter(!is.na(property_address)) %>% 
-          dplyr::filter(auction_type == "FORECLOSURE") %>% 
+          dplyr::filter(auction_type == type) %>% 
           select(auction_date, final_judgment_amount, property_address, city) %>% 
           separate(city, into = c("city", "zip"), sep = ", ") %>% 
           mutate(auction_date = if_else(str_detect(auction_date, "^(\\d{2}/){2}\\d{4}"),
