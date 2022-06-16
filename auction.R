@@ -86,10 +86,17 @@ pull_auction <- function(type) {
   
   # Reshaping previous data
   auction_past <- read_rds(paste0(auction_category, ".rds"))
-  auction_past <- auction_past %>% 
-    mutate(id = paste(address, city, state, zip, sep = ", "),
-           .keep = "unused", .before = 1) %>% 
-    select(-auction_date, -judgment_amount)
+  if (auction_category == "foreclose") {
+    auction_past <- auction_past %>% 
+      mutate(id = paste(address, city, state, zip, sep = ", "),
+             .keep = "unused", .before = 1) %>% 
+      select(-auction_date, -judgment_amount)
+  } else { # taxdeed
+    auction_past <- auction_past %>% 
+      mutate(id = paste(address, city, state, zip, sep = ", "),
+             .keep = "unused", .before = 1) %>% 
+      select(-auction_date, -opening_bid)
+  }
   
   # Creating data
   if (auction_category == "foreclose") {
