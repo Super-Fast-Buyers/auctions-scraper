@@ -275,8 +275,9 @@ parse_pages_case <- function(page, type) {
         auction_data <- NULL
       } else {
         auction_data <- df_tbl %>% 
-          dplyr::filter(!is.na(property_address)) %>% 
-          dplyr::filter(auction_type == type)
+          dplyr::filter(!is.na(property_address)) 
+          # dplyr::filter(!is.na(property_address)) %>% 
+          # dplyr::filter(auction_type == type)
         if (type == "FORECLOSURE") {
           auction_data <- auction_data %>% 
             select(auction_date, final_judgment_amount, property_address, city) %>% 
