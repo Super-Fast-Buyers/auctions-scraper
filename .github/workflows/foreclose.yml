@@ -36,6 +36,7 @@ jobs:
           CRED_PATH: ${{ secrets.CRED_PATH }}
           SECRET_TOKEN: ${{ secrets.SECRET_TOKEN }}
           SHEETS_FORECLOSE: ${{ secrets.SHEETS_FORECLOSE }}
+          SHEETS_TEST: ${{ secrets.SHEETS_TEST }}
         run: | 
           echo $SECRET_TOKEN >> $CRED_PATH
           Rscript foreclose.R

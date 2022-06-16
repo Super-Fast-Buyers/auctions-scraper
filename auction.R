@@ -15,7 +15,8 @@ pull_auction <- function(type) {
   gs4_auth(path = Sys.getenv("CRED_PATH"))
   days <- tryCatch({
     read_sheet(
-      ss = Sys.getenv(paste0("SHEETS_", toupper(auction_category))),
+      # ss = Sys.getenv(paste0("SHEETS_", toupper(auction_category))),
+      ss = Sys.getenv(paste0("SHEETS_TEST")),
       sheet = "Schedule",
       range = "days_out",
       col_names = FALSE) %>%
