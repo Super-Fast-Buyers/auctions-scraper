@@ -142,7 +142,7 @@ parse_page <- function(page, type = "foreclose") {
       auction_data <- df_tbl %>% 
         dplyr::filter(!is.na(property_address)) %>% 
         dplyr::filter(auction_type == type)
-      if (type == "FORCLOSURE") {
+      if (type == "FORCELOSURE") {
         auction_data <- auction_data %>% 
           select(auction_date, final_judgment_amount, property_address, city) %>% 
           separate(city, into = c("city", "zip"), sep = ", ") %>% 
@@ -201,7 +201,7 @@ parse_pages <- function(page, type = "foreclose") {
         auction_data <- df_tbl %>% 
           dplyr::filter(!is.na(property_address)) %>% 
           dplyr::filter(auction_type == type)
-        if (type == "FORCLOSURE") {
+        if (type == "FORECLOSURE") {
           auction_data <- auction_data %>% 
             select(auction_date, final_judgment_amount, property_address, city) %>% 
             separate(city, into = c("city", "zip"), sep = ", ") %>% 
@@ -277,7 +277,7 @@ parse_pages_case <- function(page, type) {
         auction_data <- df_tbl %>% 
           dplyr::filter(!is.na(property_address)) %>% 
           dplyr::filter(auction_type == type)
-        if (type == "FORCLOSURE") {
+        if (type == "FORECLOSURE") {
           auction_data <- auction_data %>% 
             select(auction_date, final_judgment_amount, property_address, city) %>% 
             separate(city, into = c("city", "zip"), sep = ", ") %>% 

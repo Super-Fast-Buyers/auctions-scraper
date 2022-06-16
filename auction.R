@@ -15,8 +15,7 @@ pull_auction <- function(type) {
   gs4_auth(path = Sys.getenv("CRED_PATH"))
   days <- tryCatch({
     read_sheet(
-      # ss = Sys.getenv(paste0("SHEETS_", toupper(auction_category))),
-      ss = Sys.getenv(paste0("SHEETS_TEST")),
+      ss = Sys.getenv(paste0("SHEETS_", toupper(auction_category))),
       sheet = "Schedule",
       range = "days_out",
       col_names = FALSE) %>%
@@ -150,7 +149,8 @@ push_auction <- function(type) {
   
   gs4_auth(path = Sys.getenv("CRED_PATH"))
   tryCatch({
-    sheet_write(auction_data, Sys.getenv(paste0("SHEETS_", toupper(auctype))), "Raw")
+    # sheet_write(auction_data, Sys.getenv(paste0("SHEETS_", toupper(auctype))), "Raw")
+    sheet_write(auction_data, Sys.getenv("SHEETS_TEST"), "Raw")
     message("Data is now available on Google Sheets!")
   }, error = function(e) message("Cannot send data to Google Sheets!"))
   gs4_deauth()
