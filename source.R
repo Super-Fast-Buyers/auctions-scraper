@@ -152,14 +152,18 @@ parse_page <- function(page, type = "foreclose") {
           rename(judgment_amount = final_judgment_amount,
                  address = property_address)
       } else { # TAXDEED
-        auction_data <- auction_data %>% 
-          select(auction_date, opening_bid, property_address, city) %>% 
-          separate(city, into = c("city", "zip"), sep = ", ") %>% 
-          mutate(auction_date = if_else(str_detect(auction_date, "^(\\d{2}/){2}\\d{4}"),
-                                        str_extract(auction_date, "^(\\d{2}/){2}\\d{4}"),
-                                        auction_date)) %>% 
-          rename(address = property_address)
-      }
+        if (is.null(suppressWarnings(auction_data$city))) {
+          auction_data <- NULL
+        } else {
+          auction_data <- auction_data %>% 
+            select(auction_date, opening_bid, property_address, city) %>% 
+            separate(city, into = c("city", "zip"), sep = ", ") %>% 
+            mutate(auction_date = if_else(str_detect(auction_date, "^(\\d{2}/){2}\\d{4}"),
+                                          str_extract(auction_date, "^(\\d{2}/){2}\\d{4}"),
+                                          auction_date)) %>% 
+            rename(address = property_address)
+        }
+      } # end of TAXDEED
     } # end of address checking
   } # end of auction waiting
   return(auction_data)
@@ -211,14 +215,18 @@ parse_pages <- function(page, type = "foreclose") {
             rename(judgment_amount = final_judgment_amount,
                    address = property_address)
         } else { # TAXDEED
-          auction_data <- auction_data %>% 
-            select(auction_date, opening_bid, property_address, city) %>% 
-            separate(city, into = c("city", "zip"), sep = ", ") %>% 
-            mutate(auction_date = if_else(str_detect(auction_date, "^(\\d{2}/){2}\\d{4}"),
-                                          str_extract(auction_date, "^(\\d{2}/){2}\\d{4}"),
-                                          auction_date)) %>% 
-            rename(address = property_address)
-        }
+          if (is.null(suppressWarnings(auction_data$city))) {
+            auction_data <- NULL
+          } else {
+            auction_data <- auction_data %>% 
+              select(auction_date, opening_bid, property_address, city) %>% 
+              separate(city, into = c("city", "zip"), sep = ", ") %>% 
+              mutate(auction_date = if_else(str_detect(auction_date, "^(\\d{2}/){2}\\d{4}"),
+                                            str_extract(auction_date, "^(\\d{2}/){2}\\d{4}"),
+                                            auction_date)) %>% 
+              rename(address = property_address)
+          } 
+        } # end of TAXDEED
       } # end of address checking
     } # end of auction waiting
     auction_data

@@ -149,12 +149,10 @@ push_auction <- function(type) {
   
   gs4_auth(path = Sys.getenv("CRED_PATH"))
   tryCatch({
-    # sheet_write(auction_data, Sys.getenv(paste0("SHEETS_", toupper(auctype))), "Raw")
-    sheet_write(auction_data, Sys.getenv("SHEETS_TEST"), "Raw")
+    sheet_write(auction_data, Sys.getenv(paste0("SHEETS_", toupper(auctype))), "Raw")
+    # sheet_write(auction_data, Sys.getenv("SHEETS_TEST"), "Raw")
     message("Data is now available on Google Sheets!")
-  }, error = function(e) message("Cannot send data to Google Sheets!"))
+  }, error = function(e) message("CANNOT send data to Google Sheets!"))
   gs4_deauth()
-  
-  return(message("Done"))
   
 }
