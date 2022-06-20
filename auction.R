@@ -116,6 +116,11 @@ pull_auction <- function(type) {
                                 date_added)) %>% 
     distinct()
   
+  # Filtering invalid city and address
+  invalid_addr <- c("NO SITUS", "NO STREET", "UNKNOWN", "NOT ASSIGNED", "UNASSIGNED")
+  auction_data <- auction_data %>% 
+    dplyr::filter(!(is.na(city) | address %in% invalid_addr))
+  
   # Save data
   write_rds(auction_data, paste0(auction_category, ".rds"))
   write_csv(auction_data, 
