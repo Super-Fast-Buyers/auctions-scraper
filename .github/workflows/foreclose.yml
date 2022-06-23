@@ -45,7 +45,7 @@ jobs:
       - name: Set today
         id: set_today
         run: | 
-          echo "::set-output name=today::$(date +'%a, %F at %H:%M %Z')"
+          echo "::set-output name=today::$(TZ='America/New_York' date +'%a, %F at %H:%M %Z')"
         
       - name: Commit result
         uses: stefanzweifel/git-auto-commit-action@v4
