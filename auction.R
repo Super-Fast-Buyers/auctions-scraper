@@ -22,6 +22,7 @@ pull_auction <- function(type) {
       as.numeric()
   }, error = function(e) { 0 })
   gs4_deauth()
+  message(paste0("days = ", days))
   
   # Listing pages to be scraped
   message("Constructing the list of pages")
@@ -64,6 +65,7 @@ pull_auction <- function(type) {
   Sys.sleep(4)
   
   # Scraping data
+  message("Scraping and parsing pages from the list")
   auction <- map(longlist, ~{
     message(paste("Get", .x))
     page <- try(scrape_page(.x))
