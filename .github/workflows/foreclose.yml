@@ -42,14 +42,12 @@ jobs:
           Rscript foreclose.R
           rm $CRED_PATH
           
-      - name: Set today
-        id: set_today
-        run: | 
-          echo "::set-output name=today::$(TZ='America/New_York' date +'%a, %F at %H:%M %Z')"
-        
       - name: Commit result
-        uses: stefanzweifel/git-auto-commit-action@v4
-        with:
-          commit_message: "Updated: ${{ steps.set_today.outputs.today }}"
-          file_pattern: history/foreclose/*.csv *.rds
-          
+        shell: bash {0}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add history/foreclose/*.csv *.rds
+          timestamp=$(TZ='America/New_York' date +'%a, %F at %H:%M %Z')
+          git commit -m "Updated: ${timestamp}" || exit 0
+          git push
