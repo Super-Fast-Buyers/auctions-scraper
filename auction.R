@@ -29,6 +29,7 @@ pull_auction <- function(type) {
   longlist <- map(seq_along(calendar_list), ~{
     calendar_url <- paste0(calendar_list[[.x]], calendar_pages(days))
     i <- .x
+    message(sprintf("Read %s", calendar_list[i]))
     day_list <- map(calendar_url, ~{
       page <- try(scrape_page(.x))
       Sys.sleep(0.5)
@@ -38,8 +39,8 @@ pull_auction <- function(type) {
           page %>% html_elements(".CALSELB") %>% html_attr("dayid")
         )
         auc_wait <- as.numeric(c(
-          page %>% html_elements(".CALSELF") %>% html_elements(".CALACT") %>% html_text(),
-          page %>% html_elements(".CALSELB") %>% html_elements(".CALACT") %>% html_text()
+          page %>% html_elements(".CALSELF") %>% html_element(".CALACT") %>% html_text(),
+          page %>% html_elements(".CALSELB") %>% html_element(".CALACT") %>% html_text()
         ))
       } else {
         day_id <- page %>% 
@@ -47,17 +48,23 @@ pull_auction <- function(type) {
           html_attr("dayid")
         auc_wait <- page %>% 
           html_elements(".CALSELT") %>% 
-          html_elements(".CALACT") %>% 
+          html_element(".CALACT") %>% 
           html_text() %>% 
           as.numeric()
       }
-      day_id <- tibble(day_id, auc_wait) %>% 
-        dplyr::filter(auc_wait > 0) %>% 
-        arrange(day_id) %>% 
-        .$day_id
-      day_list <- paste0(domain_list[[i]], "?zaction=AUCTION&Zmethod=PREVIEW&AUCTIONDATE=", day_id)
-      day_list <- day_list[grepl("\\d{4}$", day_list)]
-      return(day_list)
+      if (length(day_id) != length(auc_wait)) {
+        # check before combining
+        message("'day_id' and 'auc_wait' is not in the same length")
+        next
+      } else {
+        day_id <- tibble(day_id, auc_wait) %>% 
+          dplyr::filter(auc_wait > 0) %>% 
+          arrange(day_id) %>% 
+          .$day_id
+        day_list <- paste0(domain_list[[i]], "?zaction=AUCTION&Zmethod=PREVIEW&AUCTIONDATE=", day_id)
+        day_list <- day_list[grepl("\\d{4}$", day_list)]
+        return(day_list)
+      }
     })
     day_list <- do.call(c, day_list)
   })
