@@ -1,50 +1,58 @@
-name: scraper
+name: python-scraper
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - 'python'
 
 jobs:
   scraping-time:
     runs-on: ubuntu-latest  
     
-    services:
-      selenium:
-        image: selenium/standalone-chrome:latest
-      
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
+      - name: Checkout repo
+        uses: actions/checkout@v3
       
-      - name: R
+      - name: Setup python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.8'
+      
+      - name: Setup R
         uses: r-lib/actions/setup-r@v2
         with:
           r-version: '4.1.1'
       
-      - name: Install dependency
-        run: sudo apt install libcurl4-openssl-dev
+      - name: Install python module
+        run: |
+          python -m pip install --upgrade pip
+          pip install playwright
+          playwright install --with-deps firefox
       
-      - name: Set up renv
-        uses: r-lib/actions/setup-renv@v2
+      - name: Install R library
+        run: |
+          sudo apt-get install libcurl4-openssl-dev
+          Rscript -e 'install.packages(c("dplyr", "googlesheets4", "jsonlite"))'
       
-      - name: Run scraper
+      - name: Run scraper and forwarder
         env:
           CRED_PATH: ${{ secrets.CRED_PATH }}
           SECRET_TOKEN: ${{ secrets.SECRET_TOKEN }}
-          SHEETS_ID: ${{ secrets.SHEETS_ID }}
+          SHEETS_FORECLOSE: ${{ secrets.SHEETS_FORECLOSE }}
+          SHEETS_TAXDEED: ${{ secrets.SHEETS_TAXDEED }}
+          SHEETS_TEST: ${{ secrets.SHEETS_TEST }}
         run: | 
           echo $SECRET_TOKEN >> $CRED_PATH
-          Rscript auction.R
-          Rscript sheets.R
+          python main.py
+          Rscript forwarder.R
           rm $CRED_PATH
           
-      - name: Set today
-        id: set_today
-        run: | 
-          echo "::set-output name=today::$(date +'%a, %F at %H:%M %Z')"
-        
       - name: Commit result
-        uses: stefanzweifel/git-auto-commit-action@v4
-        with:
-          commit_message: "Updated: ${{ steps.set_today.outputs.today }}"
-          file_pattern: history/*.csv *.rds
-          
+        shell: bash {0}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add history/*.json *.rds history/foreclose/*.csv history/taxdeed/*.csv
+          timestamp=$(TZ='America/New_York' date +'%a, %F at %H:%M %Z')
+          git commit -m "Updated: ${timestamp}" || exit 0
+          git push
