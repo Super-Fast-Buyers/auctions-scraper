@@ -9,14 +9,21 @@ jobs:
   scraping-time:
     runs-on: ubuntu-latest  
     
-    services:
-      playwright:
-        image: mcr.microsoft.com/playwright/python
-      
     steps:
-      - name: Checkout
+      - name: Checkout repo
         uses: actions/checkout@v3
       
+      - name: Setup python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.8
+      
+      - name: Install modules
+        run: |
+          python -m pip install --upgrade pip
+          pip install playwright
+          playwright install --with-deps firefox
+        
       - name: Run python scraper
         run: | 
           python main.py
