@@ -31,6 +31,7 @@ jobs:
       
       - name: Install R library
         run: |
+          sudo apt-get install libcurl4-openssl-dev
           Rscript -e 'install.packages(c("dplyr", "googlesheets4", "jsonlite"))'
       
       - name: Run scraper and forwarder
