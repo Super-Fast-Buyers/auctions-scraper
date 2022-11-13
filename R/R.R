@@ -10,7 +10,7 @@ json2tbl <- function(json, category) {
   if (!(category %in% c("FORECLOSURE", "TAXDEED"))) {
     stop("Argument 'category' must be FORECLOSURE or TAXDEED")
   }
-  data <- fromJSON(json)%>% 
+  data <- fromJSON(suppressWarnings(readLines(json))) %>% 
     dplyr::filter(
       auction_type == category,
       !is.na(auction_date),
