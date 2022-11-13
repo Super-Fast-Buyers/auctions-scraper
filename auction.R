@@ -1,13 +1,13 @@
 # Pull Data from Website
-pull_auction <- function(auction_category) {
-  
-  if (!(auction_category %in% c("foreclose", "taxdeed"))) {
-    stop("Argument auction_category = foreclose, taxdeed")
-  }
+pull_auction <- function(type) {
   
   # Listing domain and pages
-  subdomain <- readLines(paste0(auction_category, ".txt"))
-  domain_list <- paste0("https://", subdomain,".real", auction_category, ".com/index.cfm")
+  auction_category <- type
+  subdomain <- read_delim(paste0(auction_category, ".txt"), "\n", 
+                          col_names = FALSE, show_col_types = FALSE)[[1]]
+  domain_list <- sprintf("https://%s.real%s.com/index.cfm", 
+                         subdomain, 
+                         auction_category)
   calendar_list <- paste0(domain_list, "?zaction=USER&zmethod=CALENDAR")
   
   # The days out
