@@ -120,31 +120,10 @@ push_auction <- function(category) {
   }
   gs4_auth(path = Sys.getenv("CRED_PATH"))
   tryCatch({
-    sheet_write(auction_data, Sys.getenv(paste0("SHEETS_", toupper(category))), "Raw")
-    # sheet_write(auction_data, Sys.getenv("SHEETS_TEST"), "Raw")
+    # sheet_write(auction_data, Sys.getenv(paste0("SHEETS_", toupper(category))), "Raw")
+    sheet_write(auction_data, Sys.getenv("SHEETS_TEST"), "Raw")
     msg <- sprintf("%s data is now available on Google Sheets!", toupper(category))
     message(msg)
   }, error = function(e) message("CANNOT send data to Google Sheets!"))
   gs4_deauth()
 }
-
-message("------------ FORECLOSE ------------")
-# convert from raw json to tibble
-auction_foreclose <- json2tbl("history/foreclose.json", "FORECLOSURE")
-save_auction_csv(auction_foreclose, "foreclose")
-# combine data with previous
-foreclose <- combine_data("foreclose.rds", auction_foreclose)
-saveRDS(foreclose, file = "foreclose.rds")
-# pushing data to Google Sheets
-push_auction("foreclose")
-
-message("------------- TAXDEED -------------")
-# convert from raw json to tibble
-auction_taxdeed <- json2tbl("history/taxdeed.json", "TAXDEED")
-save_auction_csv(auction_taxdeed, "taxdeed")
-# combine data with previous
-taxdeed <- combine_data("taxdeed.rds", auction_taxdeed)
-saveRDS(taxdeed, file = "taxdeed.rds")
-# pushing data to Google Sheets
-push_auction("taxdeed")
-message("--------------- END ---------------")
