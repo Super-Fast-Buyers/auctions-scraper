@@ -1,7 +1,6 @@
 # Auction Scraping
 
-[![foreclose](https://github.com/Super-Fast-Buyers/auctions-scraper/actions/workflows/foreclose.yml/badge.svg)](https://github.com/Super-Fast-Buyers/auctions-scraper/actions/workflows/foreclose.yml)
-[![taxdeed](https://github.com/Super-Fast-Buyers/auctions-scraper/actions/workflows/taxdeed.yml/badge.svg)](https://github.com/Super-Fast-Buyers/auctions-scraper/actions/workflows/taxdeed.yml)
+[![Scheduled mining](https://github.com/Super-Fast-Buyers/auctions-scraper/actions/workflows/scraper-v2.yml/badge.svg)](https://github.com/Super-Fast-Buyers/auctions-scraper/actions/workflows/scraper-v2.yml)
 
 **How is the script work?**
 
