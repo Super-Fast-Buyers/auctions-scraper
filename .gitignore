@@ -53,3 +53,6 @@ rsconnect/
 
 # Temporary working path
 temp/
+
+# Python cache
+__pycache__/

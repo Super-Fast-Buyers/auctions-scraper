@@ -34,7 +34,7 @@ jobs:
         run: | 
           echo $SECRET_TOKEN >> $CRED_PATH
           Rscript foreclose.R
-          #Rscript taxdeed.R
+          Rscript taxdeed.R
           rm $CRED_PATH
         
       - name: Commit data

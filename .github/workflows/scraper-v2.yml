@@ -1,9 +1,10 @@
 name: scraper-v2
 
 on:
-  push:
-    branches:
-      - 'python'
+  schedule:
+    - cron: '0 4 * * 2' # in the midnight Monday to Tuesday UTC-4 (Tuesday at 04.00 AM UTC)
+    - cron: '0 4 * * 4' # Thursday
+    - cron: '0 4 * * 6' # Saturday
   workflow_dispatch:
   
 jobs:
@@ -68,7 +69,7 @@ jobs:
         run: | 
           echo $SECRET_TOKEN >> $CRED_PATH
           Rscript foreclose.R
-          #Rscript taxdeed.R
+          Rscript taxdeed.R
           rm $CRED_PATH
         
       - name: Commit data
