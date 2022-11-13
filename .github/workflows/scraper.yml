@@ -3,7 +3,7 @@ name: python-scraper
 on:
   push:
     branches:
-      - 'python'
+      - 'r2py-archive'
 
 jobs:
   scraping-time:
