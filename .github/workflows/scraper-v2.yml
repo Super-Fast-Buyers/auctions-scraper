@@ -27,7 +27,7 @@ jobs:
           playwright install --with-deps firefox
       
       - name: Run scraper
-        run: python main.py
+        run: python scraper.py
                 
       - name: Commit result
         run: |
