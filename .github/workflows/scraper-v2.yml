@@ -76,6 +76,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git pull
           git add *.rds history/foreclose/*.csv history/taxdeed/*.csv
           timestamp=$(TZ='America/New_York' date +'%a, %F at %H:%M %Z')
           git commit -m "Data updated: ${timestamp}" || exit 0
