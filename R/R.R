@@ -58,7 +58,8 @@ combine_data <- function(old_data_rds, new_data) {
   auction_past <- readRDS(old_data_rds) %>% 
     mutate(id = paste(address, city, state, zip, sep = ", "),
            .keep = "unused", .before = 1) %>% 
-    select(id, date_added)
+    select(id, date_added) %>%
+    distinct()
   # combine old data with the newest data
   auction_data <- new_data %>% 
     mutate(id = paste(address, city, state, zip, sep = ", ")) %>% 
@@ -120,7 +121,13 @@ push_auction <- function(category) {
   }
   gs4_auth(path = Sys.getenv("CRED_PATH"))
   tryCatch({
-    sheet_write(auction_data, Sys.getenv(paste0("SHEETS_", toupper(category))), "Raw")
+    if (Sys.getenv(paste0("SHEETS_", toupper(category))) == "") {
+      sheet_write(auction_data, Sys.getenv("SHEETS_TEST"), "Raw")
+    }
+    else {
+      sheet_write(auction_data, Sys.getenv(paste0("SHEETS_", toupper(category))), "Raw")
+    }
+    # sheet_write(auction_data, Sys.getenv(paste0("SHEETS_", toupper(category))), "Raw")
     # sheet_write(auction_data, Sys.getenv("SHEETS_TEST"), "Raw")
     msg <- sprintf("%s data is now available on Google Sheets!", toupper(category))
     message(msg)
