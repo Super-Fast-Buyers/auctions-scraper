@@ -11,7 +11,6 @@ hernando
 hillsborough
 indian-river
 jackson
-jackson
 lee
 leon
 marion
@@ -29,3 +28,4 @@ santarosa
 sarasota
 volusia
 washington
+seminole
