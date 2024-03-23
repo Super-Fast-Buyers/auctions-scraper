@@ -6,7 +6,7 @@ on:
     - cron: '0 4 * * 4' # Thursday
     - cron: '0 4 * * 6' # Saturday
   workflow_dispatch:
-  
+
 jobs:
   scraping:
     runs-on: ubuntu-latest
