@@ -2,28 +2,28 @@ name: forwarder
 
 on:
   workflow_dispatch:
-  
+
 jobs:
   forwarding:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
-            
+
       - name: Setup R
         uses: r-lib/actions/setup-r@v2
         with:
-          r-version: '4.1.1'
-        
+          r-version: "4.1.1"
+
       - name: Install R library
         run: |
           sudo apt-get install libcurl4-openssl-dev
           Rscript -e 'install.packages(c("dplyr", "googlesheets4", "jsonlite"))'
-        
+
       - name: Run wrangler
         run: Rscript wrangler.R
-        
+
       - name: Run forwarder
         env:
           CRED_PATH: ${{ secrets.CRED_PATH }}
@@ -31,12 +31,12 @@ jobs:
           SHEETS_FORECLOSE: ${{ secrets.SHEETS_FORECLOSE }}
           SHEETS_TAXDEED: ${{ secrets.SHEETS_TAXDEED }}
           SHEETS_TEST: ${{ secrets.SHEETS_TEST }}
-        run: | 
+        run: |
           echo $SECRET_TOKEN >> $CRED_PATH
           Rscript foreclose.R
           Rscript taxdeed.R
           rm $CRED_PATH
-        
+
       - name: Commit data
         run: |
           git config user.name "github-actions[bot]"
