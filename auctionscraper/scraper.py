@@ -7,6 +7,7 @@ import re
 # Logger
 logging.basicConfig(level=logging.DEBUG)
 
+
 def read_txt(txt:str):
     """ Read subdomain (county) from txt file """
     with open(txt, 'r') as f:
