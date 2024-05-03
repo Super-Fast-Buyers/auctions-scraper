@@ -9,12 +9,17 @@ import re
 # Logger
 logging.basicConfig(level=logging.DEBUG)
 
+# <<<<<<< main
 PAGE_DEFAULT_TIMEOUT = 90000
 MAX_RETRY = 5
 
 
 
-def read_txt(txt: str):
+# def read_txt(txt: str):
+# =======
+
+def read_txt(txt:str):
+# >>>>>>> main
     """ Read subdomain (county) from txt file """
     with open(txt, 'r') as f:
         return [line.strip() for line in f.readlines()]
