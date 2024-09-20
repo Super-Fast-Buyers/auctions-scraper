@@ -3,8 +3,7 @@ name: scraper-test
 on:
   push:
     branches:
-      - 'devel'
-      - '!main'
+      - 'scrapdev2'
   schedule:
     - cron: '0 4 * * 3' # in the midnight of Wednesday UTC-4 (Wed 04.00 AM UTC)
     - cron: '0 4 * * 5' # Friday
