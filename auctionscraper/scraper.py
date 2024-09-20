@@ -24,7 +24,7 @@ def create_baseurl(subdomain: str, category: str) -> str:
 def create_calendar_url(baseurl:str, days=0) -> list:
     """ Get calendar pages to be scraped """
     tday = date.today() + timedelta(days=days)
-    days_out = 10
+    days_out = 90
     calendar = []
     month = []
     for day in range(0, days_out, 28):
