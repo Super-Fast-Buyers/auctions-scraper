@@ -6,22 +6,18 @@ import re
 # Logger
 logging.basicConfig(level=logging.DEBUG)
 
-
 def read_txt(txt: str):
     """ Read subdomain (county) from txt file """
     with open(txt, 'r') as f:
         return [line.strip() for line in f.readlines()]
 
-
 def create_baseurl(subdomain: str, category: str) -> str:
     """ Create calendar URL """
     if category not in ['foreclose', 'taxdeed']:
-        return('Please define "foreclose" or "taxdeed" in category argument')
-    else:
-        return f"https://{subdomain}.real{category}.com/index.cfm?zaction=USER&zmethod=CALENDAR"
+        return 'Please define "foreclose" or "taxdeed" in category argument'
+    return f"https://{subdomain}.real{category}.com/index.cfm?zaction=USER&zmethod=CALENDAR"
 
-
-def create_calendar_url(baseurl:str, days=0) -> list:
+def create_calendar_url(baseurl: str, days=0) -> list:
     """ Get calendar pages to be scraped """
     tday = date.today() + timedelta(days=days)
     days_out = 90
@@ -36,7 +32,6 @@ def create_calendar_url(baseurl:str, days=0) -> list:
             calendar.append(baseurl + "&selCalDate=" + date_url)
     return calendar
 
-
 def get_calendar_list(category: str, days: int) -> list:
     """ Get calendar url list to be scraped """
     calendar_url = []
@@ -45,16 +40,15 @@ def get_calendar_list(category: str, days: int) -> list:
         calendar_url += create_calendar_url(baseurl, days=days)
     return calendar_url
 
-
 def parse_box(page: Page) -> list:
-    """Parse URLs from the calendar page for auction schedules."""
-    calendar_boxes = page.query_selector_all('div[class*=CALSEL], div[class*=CALSCH]')  # Include both CALSEL and CALSCH
+    """ Parse URLs from the calendar page for auction schedules. """
+    calendar_boxes = page.query_selector_all('div[class*=CALSEL], div[class*=CALSCH]')  # Select both classes
     box_urls = []
 
     for box in calendar_boxes:
         try:
             day_id = box.get_attribute('dayid')
-            category = 'Foreclosure' if 'foreclose' in page.url else 'Tax Deed'
+            category = re.findall(r'(?<=real)\w+(?=\.com)', page.url)[0].capitalize()  # Capture category
             auction_info = box.query_selector('.CALTEXT').inner_text()
             scheduled_auctions = box.query_selector('.CALSCH').inner_text().strip()
 
@@ -67,17 +61,14 @@ def parse_box(page: Page) -> list:
 
     return box_urls
 
-
-
 def get_box_list(urls: list) -> list:
-    """Get box URLs from calendar pages and check for active auctions."""
+    """ Get box URLs from calendar pages and check for active auctions. """
     data = []
-    
     with sync_playwright() as p:
         browser = p.firefox.launch()
         page = browser.new_page()
         page.set_default_timeout(60000)
-        
+
         for url in urls:
             logging.debug(f"GET {url} | LEVEL 1")
             try:
@@ -92,15 +83,12 @@ def get_box_list(urls: list) -> list:
         
     return data
 
-
-
 def scrape_auction_items(page):
-    """Scrape auction items from the current page, focusing only on '3rd Party Bidder' data."""
+    """ Scrape auction items from the current page, focusing only on '3rd Party Bidder' data. """
     auction_items = page.query_selector_all('#Area_C .AUCTION_ITEM.PREVIEW')
     auction_data = []
 
     for auction_item in auction_items:
-        # Extract the Sold To field
         sold_to_element = auction_item.query_selector('.ASTAT_MSG_SOLDTO_MSG')
         sold_to = sold_to_element.inner_text().strip() if sold_to_element else None
 
@@ -163,8 +151,6 @@ def get_data(urls):
         browser.close()
     
     return data
-
-
 
 if __name__ == '__main__':
     pass
