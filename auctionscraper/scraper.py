@@ -76,7 +76,7 @@ def get_box_list(urls: list) -> list:
     with sync_playwright() as p:
         browser = p.firefox.launch()
         page = browser.new_page()
-        page.set_default_timeout(90000)
+        page.set_default_timeout(60000)
         
         for url in urls:
             logging.debug(f"GET {url} | LEVEL 1")
@@ -119,28 +119,41 @@ def scrape_auction_items(page: Page):
 
             # Extract auction details from the table
             auction_details = {}
-            auction_fields = auction_item.query_selector_all('tr > th')
-            auction_values = auction_item.query_selector_all('tr > td')
+            auction_rows = auction_item.query_selector_all('tr')
 
-            for i in range(len(auction_fields)):
-                field = auction_fields[i].inner_text().strip().lower().replace(':', '').replace(' ', '_')
-                value = auction_values[i].inner_text().strip()
+            for row in auction_rows:
+                field_element = row.query_selector('th')
+                value_element = row.query_selector('td')
+                
+                if field_element and value_element:
+                    field = field_element.inner_text().strip().lower().replace(':', '').replace(' ', '_')
+                    value = value_element.inner_text().strip()
 
-                # Map specific fields to desired format
-                if field == "auction_type":
-                    auction_details["auction_type"] = value
-                elif field == "case_#":
-                    auction_details["case_number"] = value
-                elif field == "final_judgment_amount":
-                    auction_details["final_judgment_amount"] = value
-                elif field == "parcel_id":
-                    auction_details["parcel_id"] = value
-                elif field == "property_address":
-                    auction_details["property_address"] = value
-                elif field == "assessed_value":
-                    auction_details["assessed_value"] = value
-                elif field == "plaintiff_max_bid":
-                    auction_details["plaintiff_max_bid"] = value
+                    # Map specific fields to desired format
+                    if field == "auction_type":
+                        auction_details["auction_type"] = value
+                    elif field == "case_#":
+                        auction_details["case_number"] = value
+                    elif field == "final_judgment_amount":
+                        auction_details["final_judgment_amount"] = value
+                    elif field == "parcel_id":
+                        auction_details["parcel_id"] = value
+                    elif field == "property_address":
+                        auction_details["property_address"] = value
+                    elif field == "assessed_value":
+                        auction_details["assessed_value"] = value
+                    elif field == "plaintiff_max_bid":
+                        auction_details["plaintiff_max_bid"] = value
+                    # Handle missing field labels (e.g., city/state/zip row)
+                    elif field == "":
+                        # Assuming it's the city/state/zip row when the label is missing
+                        city_state_zip = value
+                        # Split city, state, and zip
+                        city, state_zip = city_state_zip.split(',', 1)
+                        state, zip_code = state_zip.strip().split('-')
+                        auction_details["city"] = city.strip()
+                        auction_details["state"] = state.strip()
+                        auction_details["zip_code"] = zip_code.strip()
 
             # Extract sold amount from auction stats
             sold_amount_element = auction_item.query_selector('.ASTAT_MSGD')
@@ -168,7 +181,7 @@ def get_data(urls: list):
     with sync_playwright() as p:
         browser = p.firefox.launch()
         page = browser.new_page()
-        page.set_default_timeout(90000)
+        page.set_default_timeout(60000)
         
         for url in urls:
             # access page

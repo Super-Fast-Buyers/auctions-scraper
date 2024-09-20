@@ -6,70 +6,62 @@ library(jsonlite)
 #' @param json json file
 #' @param category category, FORECLOSURE or TAXDEED
 #' 
-library(dplyr, warn.conflicts = FALSE)
-library(jsonlite)
-
-#' Import New Auction Data from JSON
-#' @param json json file
-#' @param category category, FORECLOSURE or TAXDEED
-#' 
 json2tbl <- function(json, category) {
   if (!(category %in% c("FORECLOSURE", "TAXDEED"))) {
     stop("Argument 'category' must be FORECLOSURE or TAXDEED")
   }
-  
-  # Read and parse JSON data
-  data <- fromJSON(suppressWarnings(readLines(json))) %>%
+  data <- fromJSON(suppressWarnings(readLines(json))) %>% 
     dplyr::filter(
       auction_type == category,
-      !is.na(auction_date) | category == "TAXDEED",  # TAXDEED may not have auction_date
+      !is.na(auction_date),
       !is.na(property_address)
-    ) %>%
+    ) %>% 
     as_tibble()
   
   if (category == "FORECLOSURE") {
-    data <- data %>%
+    data <- data %>% 
       select(
         auction_date,
-        county = city, # Placeholder, add if data available
-        auction_type,
-        sold_amount = final_judgment_amount,
-        # opening_bid = 'NA', # Placeholder, add if data available
-        # excess_amount = 'NA', # Placeholder, add if data available
-        case_number = case,
-        parcel_id,
-        property_address,
-        property_city = city,
-        property_state = state,
-        property_zip = zipcode
+        auction_time,           # Include auction time
+        sold_to,                # Include buyer info
+        sold_amount,            # Include sold amount
+        judgment_amount = final_judgment_amount,
+        case_number,            # Include case number
+        parcel_id,              # Include parcel ID
+        address = property_address,
+        city,
+        state,
+        zip = zip_code,         # Use the updated zip_code field
+        assessed_value,         # Include assessed value
+        plaintiff_max_bid        # Include plaintiff's max bid
       )
   } else { # TAXDEED
-    data <- data %>%
+    data <- data %>% 
       select(
-        # auction_date = NA, # Placeholder, add if data available
-        # county = NA, # Placeholder, add if data available
-        auction_type,
-        # sold_amount = NA, # Placeholder, add if data available
+        auction_date,
+        auction_time,           # Include auction time
+        sold_to,                # Include buyer info
+        sold_amount,            # Include sold amount
         opening_bid,
-        # excess_amount = NA, # Placeholder, add if data available
-        case_number = case,
-        parcel_id,
-        property_address,
-        # property_city = NA, # Placeholder, add if data available
-        # property_state = NA, # Placeholder, add if data available
-        property_zip = NA # Placeholder, add if data available
+        case_number,            # Include case number
+        parcel_id,              # Include parcel ID
+        address = property_address,
+        city,
+        state,
+        zip = zip_code,         # Use the updated zip_code field
+        assessed_value,         # Include assessed value
+        plaintiff_max_bid        # Include plaintiff's max bid
       )
   }
   
-  # Filter invalid location data
+  # filter invalid location data
   invalid_addr <- c("UNKNOWN", "NOT ASSIGNED", "UNASSIGNED")
-  data <- data %>%
+  data <- data %>% 
     dplyr::filter(
-      !(is.na(property_city) | 
-        grepl(pattern = "^NO\\s", x = property_address) | 
-        property_address %in% invalid_addr)
+      !(is.na(city) | 
+          grepl(pattern = "^NO\\s", x = .$address) | 
+          address %in% invalid_addr)
     )
-  
   return(data)
 }
 
@@ -78,29 +70,47 @@ json2tbl <- function(json, category) {
 #' @param new_data new imported data from json
 #' 
 combine_data <- function(old_data_rds, new_data) {
-  # reshape old data
-  auction_past <- readRDS(old_data_rds) %>% 
-    mutate(id = paste(address, city, state, zip, sep = ", "),
-           .keep = "unused", .before = 1) %>% 
-    select(id, date_added) %>% 
-    distinct()
-  # combine old data with the newest data
-  auction_data <- new_data %>% 
-    mutate(id = paste(address, city, state, zip, sep = ", ")) %>% 
-    left_join(auction_past, by = "id") %>% 
-    select(-id) %>% 
-    mutate(
-      date_added = ifelse(
-        is.na(date_added),
-        format(Sys.Date(), "%m/%d/%Y"),
-        date_added),
-      auction_date = as.Date(auction_date, "%m/%d/%Y")
-    ) %>% 
-    arrange(auction_date, city, zip) %>% 
-    mutate(auction_date = format(auction_date, "%m/%d/%Y")) %>% 
-    distinct()
+  # Check if the old_data_rds file exists
+  if (file.exists(old_data_rds)) {
+    # Reshape old data
+    auction_past <- readRDS(old_data_rds) %>% 
+      mutate(id = paste(address, city, state, zip, sep = ", "),
+             .keep = "unused", .before = 1) %>% 
+      select(id, date_added) %>% 
+      distinct()
+    
+    # Combine old data with the newest data
+    auction_data <- new_data %>% 
+      mutate(id = paste(address, city, state, zip, sep = ", ")) %>% 
+      left_join(auction_past, by = "id") %>% 
+      select(-id) %>% 
+      mutate(
+        date_added = ifelse(
+          is.na(date_added),
+          format(Sys.Date(), "%m/%d/%Y"),
+          date_added
+        ),
+        auction_date = as.Date(auction_date, "%m/%d/%Y")
+      ) %>% 
+      arrange(auction_date, city, zip) %>% 
+      mutate(auction_date = format(auction_date, "%m/%d/%Y")) %>% 
+      distinct()
+    
+  } else {
+    # If the old_data_rds doesn't exist, just return the new_data
+    auction_data <- new_data %>% 
+      mutate(
+        auction_date = as.Date(auction_date, "%m/%d/%Y"),
+        date_added = format(Sys.Date(), "%m/%d/%Y")
+      ) %>% 
+      arrange(auction_date, city, zip) %>% 
+      mutate(auction_date = format(auction_date, "%m/%d/%Y")) %>% 
+      distinct()
+  }
+
   return(auction_data)
 }
+
 
 #' Save New Combined Auction Data to CSV for History
 #' @param new_data new imported data from json
@@ -127,22 +137,39 @@ push_auction <- function(category) {
   if (category == "foreclose") {
     names(auction_data) <- c(
       "Auction Date", 
+      "Auction Time",        # Added auction time
+      "Sold To",             # Added sold_to
+      "Sold Amount",         # Added sold_amount
       "Judgment Amount", 
-      "Address", "City", 
+      "Case Number",         # Added case number
+      "Parcel ID",           # Added parcel_id
+      "Address", 
+      "City", 
       "State", 
-      "Zip",
+      "Zip", 
+      "Assessed Value",      # Added assessed_value
+      "Plaintiff Max Bid",   # Added plaintiff max bid
       "Date Added"
     )
   } else { # taxdeed
     names(auction_data) <- c(
       "Auction Date", 
+      "Auction Time",        # Added auction time
+      "Sold To",             # Added sold_to
+      "Sold Amount",         # Added sold_amount
       "Opening Bid", 
-      "Address", "City", 
+      "Case Number",         # Added case number
+      "Parcel ID",           # Added parcel_id
+      "Address", 
+      "City", 
       "State", 
-      "Zip",
+      "Zip", 
+      "Assessed Value",      # Added assessed_value
+      "Plaintiff Max Bid",   # Added plaintiff max bid
       "Date Added"
     )
   }
+  
   gs4_auth(path = Sys.getenv("CRED_PATH"))
   tryCatch({
     if (Sys.getenv(paste0("SHEETS_", toupper(category))) == "") {
@@ -151,10 +178,9 @@ push_auction <- function(category) {
     else {
       sheet_write(auction_data, Sys.getenv(paste0("SHEETS_", toupper(category))), "Raw")
     }
-    # sheet_write(auction_data, Sys.getenv(paste0("SHEETS_", toupper(category))), "Raw")
-    # sheet_write(auction_data, Sys.getenv("SHEETS_TEST"), "Raw")
     msg <- sprintf("%s data is now available on Google Sheets!", toupper(category))
     message(msg)
   }, error = function(e) message("CANNOT send data to Google Sheets!"))
   gs4_deauth()
 }
+
