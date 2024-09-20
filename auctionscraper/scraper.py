@@ -22,19 +22,32 @@ def create_baseurl(subdomain: str, category: str) -> str:
 
 
 def create_calendar_url(baseurl: str, days=0) -> list:
-    """ Get calendar pages to be scraped """
+    """Get calendar pages to be scraped"""
     tday = date.today() + timedelta(days=days)
-    days_out = 90
+    days_range = 90  # Look 90 days before and after
     calendar = []
     month = []
-    for day in range(0, days_out, 28):
+    
+    # Loop to look back 90 days
+    for day in range(-days_range, 0, 28):
         calendar_date = tday + timedelta(days=day)
         index = calendar_date.strftime('%m/%d/%Y').split('/')[0]
         if index not in month:
             month.append(index)
             date_url = calendar_date.strftime('%m/%d/%Y')
             calendar.append(baseurl + "&selCalDate=" + date_url)
+    
+    # Loop to look ahead 90 days
+    for day in range(0, days_range, 28):
+        calendar_date = tday + timedelta(days=day)
+        index = calendar_date.strftime('%m/%d/%Y').split('/')[0]
+        if index not in month:
+            month.append(index)
+            date_url = calendar_date.strftime('%m/%d/%Y')
+            calendar.append(baseurl + "&selCalDate=" + date_url)
+    
     return calendar
+
 
 
 def get_calendar_list(category: str, days: int) -> list:
