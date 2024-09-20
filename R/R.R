@@ -6,46 +6,70 @@ library(jsonlite)
 #' @param json json file
 #' @param category category, FORECLOSURE or TAXDEED
 #' 
+library(dplyr, warn.conflicts = FALSE)
+library(jsonlite)
+
+#' Import New Auction Data from JSON
+#' @param json json file
+#' @param category category, FORECLOSURE or TAXDEED
+#' 
 json2tbl <- function(json, category) {
   if (!(category %in% c("FORECLOSURE", "TAXDEED"))) {
     stop("Argument 'category' must be FORECLOSURE or TAXDEED")
   }
-  data <- fromJSON(suppressWarnings(readLines(json))) %>% 
+  
+  # Read and parse JSON data
+  data <- fromJSON(suppressWarnings(readLines(json))) %>%
     dplyr::filter(
       auction_type == category,
-      !is.na(auction_date),
+      !is.na(auction_date) | category == "TAXDEED",  # TAXDEED may not have auction_date
       !is.na(property_address)
-    ) %>% 
+    ) %>%
     as_tibble()
+  
   if (category == "FORECLOSURE") {
-    data <- data %>% 
+    data <- data %>%
       select(
         auction_date,
-        judgment_amount = final_judgment_amount,
-        address = property_address,
-        city,
-        state,
-        zip = zipcode
+        county = city, # Placeholder, add if data available
+        auction_type,
+        sold_amount = final_judgment_amount,
+        # opening_bid = 'NA', # Placeholder, add if data available
+        # excess_amount = 'NA', # Placeholder, add if data available
+        case_number = case,
+        parcel_id,
+        property_address,
+        property_city = city,
+        property_state = state,
+        property_zip = zipcode
       )
   } else { # TAXDEED
-    data <- data %>% 
+    data <- data %>%
       select(
-        auction_date,
+        # auction_date = NA, # Placeholder, add if data available
+        # county = NA, # Placeholder, add if data available
+        auction_type,
+        # sold_amount = NA, # Placeholder, add if data available
         opening_bid,
-        address = property_address,
-        city,
-        state,
-        zip = zipcode
+        # excess_amount = NA, # Placeholder, add if data available
+        case_number = case,
+        parcel_id,
+        property_address,
+        # property_city = NA, # Placeholder, add if data available
+        # property_state = NA, # Placeholder, add if data available
+        property_zip = NA # Placeholder, add if data available
       )
   }
-  # filter invalid location data
+  
+  # Filter invalid location data
   invalid_addr <- c("UNKNOWN", "NOT ASSIGNED", "UNASSIGNED")
-  data <- data %>% 
+  data <- data %>%
     dplyr::filter(
-      !(is.na(city) | 
-          grepl(pattern = "^NO\\s", x = .$address) | 
-          address %in% invalid_addr)
+      !(is.na(property_city) | 
+        grepl(pattern = "^NO\\s", x = property_address) | 
+        property_address %in% invalid_addr)
     )
+  
   return(data)
 }
 
@@ -58,7 +82,7 @@ combine_data <- function(old_data_rds, new_data) {
   auction_past <- readRDS(old_data_rds) %>% 
     mutate(id = paste(address, city, state, zip, sep = ", "),
            .keep = "unused", .before = 1) %>% 
-    select(id, date_added) %>%
+    select(id, date_added) %>% 
     distinct()
   # combine old data with the newest data
   auction_data <- new_data %>% 

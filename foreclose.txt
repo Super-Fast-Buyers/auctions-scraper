@@ -1,3 +1,4 @@
+manatee
 alachua
 bay
 brevard
@@ -12,7 +13,6 @@ hillsborough
 indian-river
 lee
 leon
-manatee
 marion
 martin
 miamidade

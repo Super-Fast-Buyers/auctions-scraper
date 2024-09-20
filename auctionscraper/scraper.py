@@ -1,5 +1,4 @@
-from playwright.sync_api import sync_playwright
-from playwright.sync_api import Page
+from playwright.sync_api import sync_playwright, Page
 from datetime import date, timedelta
 import logging
 import re
@@ -8,19 +7,21 @@ import re
 logging.basicConfig(level=logging.DEBUG)
 
 
-def read_txt(txt:str):
+def read_txt(txt: str):
     """ Read subdomain (county) from txt file """
     with open(txt, 'r') as f:
         return [line.strip() for line in f.readlines()]
 
-def create_baseurl(subdomain:str, category:str) -> str:
+
+def create_baseurl(subdomain: str, category: str) -> str:
     """ Create calendar URL """
     if category not in ['foreclose', 'taxdeed']:
         return('Please define "foreclose" or "taxdeed" in category argument')
     else:
         return f"https://{subdomain}.real{category}.com/index.cfm?zaction=USER&zmethod=CALENDAR"
 
-def create_calendar_url(baseurl:str, days=0) -> list:
+
+def create_calendar_url(baseurl: str, days=0) -> list:
     """ Get calendar pages to be scraped """
     tday = date.today() + timedelta(days=days)
     days_out = 90
@@ -35,17 +36,19 @@ def create_calendar_url(baseurl:str, days=0) -> list:
             calendar.append(baseurl + "&selCalDate=" + date_url)
     return calendar
 
-def get_calendar_list(category:str, days:int) -> list:
-  """ Get calendar url list to be scraped """
-  calendar_url = []
-  for subdomain in read_txt(f"{category}.txt"):
-      baseurl = create_baseurl(subdomain, category)
-      calendar_url += create_calendar_url(baseurl, days=days)
-  return calendar_url
 
-def parse_box(page:Page) -> list:
+def get_calendar_list(category: str, days: int) -> list:
+    """ Get calendar url list to be scraped """
+    calendar_url = []
+    for subdomain in read_txt(f"{category}.txt"):
+        baseurl = create_baseurl(subdomain, category)
+        calendar_url += create_calendar_url(baseurl, days=days)
+    return calendar_url
+
+
+def parse_box(page: Page) -> list:
     """ Parse url from box calendar """
-    calendar_box = page.query_selector_all('div[class*=CALSEL]') # could be CALSEF, CALSET, CALSELB
+    calendar_box = page.query_selector_all('div[class*=CALSEL]')  # could be CALSEF, CALSET, CALSELB
     box_url = []
     for box in calendar_box:
         day_id = box.get_attribute('dayid')
@@ -62,7 +65,8 @@ def parse_box(page:Page) -> list:
                 box_url.append(url)
     return box_url
 
-def get_box_list(urls:list) -> list:
+
+def get_box_list(urls: list) -> list:
     """ Get box url from calendar page """
     data = []
     with sync_playwright() as p:
@@ -85,8 +89,73 @@ def get_box_list(urls:list) -> list:
         browser.close()
     return data
 
-def get_data(urls:list):
-    """ Get auction data """
+
+def scrape_auction_items(page: Page):
+    """ Scrape auction items from the current page, only storing '3rd Party Bidder' data and printing to console """
+    auction_items = page.query_selector_all('#Area_C > .AUCTION_ITEM.PREVIEW')
+    auction_data = []
+
+    for auction_item in auction_items:
+        # Extract auction date and time
+        auction_date_time_element = auction_item.query_selector('.ASTAT_MSGB')
+        auction_date_time = auction_date_time_element.inner_text().strip() if auction_date_time_element else 'Unknown'
+        auction_date, auction_time = auction_date_time.split(' ', 1) if ' ' in auction_date_time else (auction_date_time, 'Unknown')
+
+        # Extract the "Sold To" field
+        sold_to_element = auction_item.query_selector('.ASTAT_MSG_SOLDTO_MSG')
+        sold_to = sold_to_element.inner_text().strip() if sold_to_element else None
+
+        # Only store if sold to "3rd Party Bidder"
+        if sold_to == "3rd Party Bidder":
+            auction_info = {
+                'auction_date': auction_date,
+                'auction_time': auction_time,
+                'sold_to': sold_to
+            }
+
+            # Extract auction details from the table
+            auction_details = {}
+            auction_fields = auction_item.query_selector_all('tr > th')
+            auction_values = auction_item.query_selector_all('tr > td')
+
+            if len(auction_fields) == len(auction_values):
+                for i in range(len(auction_fields)):
+                    field = auction_fields[i].inner_text().strip().lower().replace(':', '').replace(' ', '_')
+                    value = auction_values[i].inner_text().strip()
+
+                    # Map specific fields to desired format
+                    if field == "case_#":
+                        auction_details["case_number"] = value
+                    elif field == "certificate_#":
+                        auction_details["certificate_number"] = value
+                    elif field == "opening_bid":
+                        auction_details["opening_bid"] = value
+                    elif field == "parcel_id":
+                        auction_details["parcel_id"] = value
+                    elif field == "property_address":
+                        auction_details["property_address"] = value
+                    elif field == "assessed_value":
+                        auction_details["assessed_value"] = value
+                    elif field == "":
+                        auction_details["city_state_zip"] = value
+                    elif field == "auction_type":
+                        auction_details["auction_type"] = value
+
+            auction_info.update(auction_details)
+
+            # Print found auction details to the console
+            print(f"Found auction data for 3rd Party Bidder:\n{auction_info}\n")
+            auction_data.append(auction_info)
+
+    # Log if no '3rd Party Bidder' auctions were found
+    if not auction_data:
+        logging.info("No 3rd Party Bidder found")
+        print("No 3rd Party Bidder found")
+        
+    return auction_data
+
+def get_data(urls: list):
+    """ Get auction data, only storing '3rd Party Bidder' auctions and printing results """
     data = []
     # open browser
     with sync_playwright() as p:
@@ -99,45 +168,15 @@ def get_data(urls:list):
             try:
                 page.goto(url)
                 page.wait_for_selector('#Area_W > .AUCTION_ITEM.PREVIEW')
-                cards = page.query_selector_all('#Area_W > .AUCTION_ITEM.PREVIEW')
-                for card in cards:
-                    # parse date
-                    auction_date = re.sub(r'^.+AUCTIONDATE=(\d{2}/\d{2}/\d{4})$', '\\1', url)
-                    # parse fields
-                    auction_field = []
-                    for text in card.query_selector_all('tr > th'):
-                        th = text.inner_text().replace('#','').replace(':','').strip()
-                        if th == '':
-                            th = 'city'
-                        th = th.lower().replace(' ','_')
-                        auction_field.append(th)
-                    # parse content
-                    auction_content = [text.inner_text().strip() for text in card.query_selector_all('tr > td')]
-                    if len(auction_field) == len(auction_content):
-                        auction_info = {auction_field[i]:auction_content[i] for i in range(len(auction_field))}
-                        fields = list(auction_info.keys())
-                        for key in fields:
-                            if key == "city":
-                                city = auction_info[key].split(', ')[0].strip()
-                                zipcode = auction_info[key].split(',')[1].strip()
-                                try:
-                                    state = zipcode.split('-')[0].strip()
-                                    zipcode = zipcode.split('-')[1].strip()
-                                except:
-                                    state = 'FL'
-                                    zipcode = zipcode
-                                auction_info.update({
-                                    'city':city,
-                                    'state':state,
-                                    'zipcode':zipcode,
-                                    'auction_date': auction_date,
-                                })
-                    else:
-                        logging.warning(f"Length of information's fields and contents doesn't matches: {url}")
-                        continue
-                    data.append(auction_info)
+                auction_data = scrape_auction_items(page)  # Get only '3rd Party Bidder' data
+                if auction_data:
+                    data += auction_data  # Store data only if there are valid auctions
+                else:
+                    logging.info(f"No 3rd Party Bidder found on page: {url}")
+                    print(f"No 3rd Party Bidder found on page: {url}")
             except Exception as e:
                 logging.warning(f"Failed to GET {url}: {e}")
+                print(f"Failed to GET {url}: {e}")
                 continue
         # close browser
         browser.close()

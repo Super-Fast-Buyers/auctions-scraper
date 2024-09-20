@@ -17,5 +17,8 @@ def scrape(category:str, output:str):
          logging.info(f"Data saved to {output}")
 
 if __name__ == '__main__':
-    scrape('foreclose', 'history/foreclose.json')
+    scrape('foreclose', 'history/foreclose.json') 
     scrape('taxdeed', 'history/taxdeed.json')
+
+
+
