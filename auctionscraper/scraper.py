@@ -60,26 +60,21 @@ def get_calendar_list(category: str, days: int) -> list:
 
 
 def parse_box(page: Page) -> list:
-    """Parse URLs from the calendar page and check for active auctions."""
+    """Parse URLs from the calendar page for auction schedules."""
     calendar_boxes = page.query_selector_all('div[class*=CALSEL], div[class*=CALSCH]')  # Include both CALSEL and CALSCH
     box_urls = []
-    
+
     for box in calendar_boxes:
         try:
             day_id = box.get_attribute('dayid')
             category = 'Foreclosure' if 'foreclose' in page.url else 'Tax Deed'
             auction_info = box.query_selector('.CALTEXT').inner_text()
-            
-            if category in auction_info:
-                active_auction_count = int(box.query_selector('.CALACT').inner_text())
-                logging.debug(f"Day ID: {day_id}, Active Auctions: {active_auction_count}")
+            scheduled_auctions = box.query_selector('.CALSCH').inner_text().strip()
 
-                if active_auction_count > 0:
-                    url = page.url.split('?')[0] + f"?zaction=AUCTION&Zmethod=PREVIEW&AUCTIONDATE={day_id}"
-                    box_urls.append(url)
-                    logging.debug(f"Active auction found, URL added: {url}")
-                else:
-                    logging.info(f"No active auctions on {day_id}")
+            if category in auction_info and int(scheduled_auctions) > 0:
+                url = page.url.split('?')[0] + f"?zaction=AUCTION&Zmethod=PREVIEW&AUCTIONDATE={day_id}"
+                box_urls.append(url)
+                logging.debug(f"Auction schedule found, URL added: {url}")
         except Exception as e:
             logging.warning(f"Error parsing box for day ID {day_id}: {e}")
 
