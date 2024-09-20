@@ -60,47 +60,57 @@ def get_calendar_list(category: str, days: int) -> list:
 
 
 def parse_box(page: Page) -> list:
-    """ Parse url from box calendar """
-    calendar_box = page.query_selector_all('div[class*=CALSEL]')  # could be CALSEF, CALSET, CALSELB
-    box_url = []
-    for box in calendar_box:
-        day_id = box.get_attribute('dayid')
-        if 'foreclose' in re.findall(r'(?<=real)\w+(?=\.com)', page.url):
-            category = r'Foreclosure'
-        elif 'taxdeed' in re.findall(r'(?<=real)\w+(?=\.com)', page.url):
-            category = r'Tax Deed'
-        else:
-            logging.warning(f"Something wrong when parsing category at ({day_id}): {page.url}")
-            continue
-        if re.findall(category, box.query_selector('.CALTEXT').inner_text()):
-            if int(box.query_selector('.CALACT').inner_text()) > 0:
-                url = page.url.split('?')[0] + f"?zaction=AUCTION&Zmethod=PREVIEW&AUCTIONDATE={day_id}"
-                box_url.append(url)
-    return box_url
+    """Parse URLs from the calendar page and check for active auctions."""
+    calendar_boxes = page.query_selector_all('div[class*=CALSEL], div[class*=CALSCH]')  # Include both CALSEL and CALSCH
+    box_urls = []
+    
+    for box in calendar_boxes:
+        try:
+            day_id = box.get_attribute('dayid')
+            category = 'Foreclosure' if 'foreclose' in page.url else 'Tax Deed'
+            auction_info = box.query_selector('.CALTEXT').inner_text()
+            
+            if category in auction_info:
+                active_auction_count = int(box.query_selector('.CALACT').inner_text())
+                logging.debug(f"Day ID: {day_id}, Active Auctions: {active_auction_count}")
+
+                if active_auction_count > 0:
+                    url = page.url.split('?')[0] + f"?zaction=AUCTION&Zmethod=PREVIEW&AUCTIONDATE={day_id}"
+                    box_urls.append(url)
+                    logging.debug(f"Active auction found, URL added: {url}")
+                else:
+                    logging.info(f"No active auctions on {day_id}")
+        except Exception as e:
+            logging.warning(f"Error parsing box for day ID {day_id}: {e}")
+
+    return box_urls
+
 
 
 def get_box_list(urls: list) -> list:
-    """ Get box url from calendar page """
+    """Get box URLs from calendar pages and check for active auctions."""
     data = []
+    
     with sync_playwright() as p:
-        # open browser
         browser = p.firefox.launch()
         page = browser.new_page()
         page.set_default_timeout(90000)
+        
         for url in urls:
-            # access page
             logging.debug(f"GET {url} | LEVEL 1")
             try:
                 page.goto(url)
                 page.wait_for_selector('.CALDAYBOX')
-                # parse content
                 data += parse_box(page)
             except Exception as e:
                 logging.warning(f"Failed to GET {url}: {e}")
                 continue
-        # close browser
+        
         browser.close()
+        
     return data
+
+
 
 
 def scrape_auction_items(page: Page):
