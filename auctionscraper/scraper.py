@@ -93,7 +93,8 @@ def get_box_list(urls: list) -> list:
     return data
 
 
-def scrape_auction_items(page: Page):
+
+def scrape_auction_items(page):
     """Scrape auction items from the current page, focusing only on '3rd Party Bidder' data."""
     auction_items = page.query_selector_all('#Area_C .AUCTION_ITEM.PREVIEW')
     auction_data = []
@@ -103,102 +104,66 @@ def scrape_auction_items(page: Page):
         sold_to_element = auction_item.query_selector('.ASTAT_MSG_SOLDTO_MSG')
         sold_to = sold_to_element.inner_text().strip() if sold_to_element else None
 
-        # Check if the auction was sold to a "3rd Party Bidder"
         if sold_to and "3rd Party Bidder" in sold_to:
-            # Extract auction date and time
             auction_date_time_element = auction_item.query_selector('.ASTAT_MSGB')
             auction_date_time = auction_date_time_element.inner_text().strip() if auction_date_time_element else 'Unknown'
             auction_date, auction_time = auction_date_time.split(' ', 1) if ' ' in auction_date_time else (auction_date_time, 'Unknown')
 
-            # Initialize auction info
             auction_info = {
                 'auction_date': auction_date,
                 'auction_time': auction_time,
-                'sold_to': sold_to
+                'sold_to': sold_to,
+                'sold_amount': auction_item.query_selector('.ASTAT_MSGD').inner_text().strip() if auction_item.query_selector('.ASTAT_MSGD') else 'Unknown',
             }
 
-            # Extract auction details from the table
-            auction_details = {}
-            auction_rows = auction_item.query_selector_all('tr')
+            auction_details = {field_element.inner_text().strip().lower().replace(':', '').replace(' ', '_'): value_element.inner_text().strip() 
+                               for row in auction_item.query_selector_all('tr') 
+                               for field_element, value_element in [(row.query_selector('th'), row.query_selector('td'))] 
+                               if field_element and value_element}
 
-            for row in auction_rows:
-                field_element = row.query_selector('th')
-                value_element = row.query_selector('td')
-                
-                if field_element and value_element:
-                    field = field_element.inner_text().strip().lower().replace(':', '').replace(' ', '_')
-                    value = value_element.inner_text().strip()
-
-                    # Map specific fields to desired format
-                    if field == "auction_type":
-                        auction_details["auction_type"] = value
-                    elif field == "case_#":
-                        auction_details["case_number"] = value
-                    elif field == "final_judgment_amount":
-                        auction_details["final_judgment_amount"] = value
-                    elif field == "parcel_id":
-                        auction_details["parcel_id"] = value
-                    elif field == "property_address":
-                        auction_details["property_address"] = value
-                    elif field == "assessed_value":
-                        auction_details["assessed_value"] = value
-                    elif field == "plaintiff_max_bid":
-                        auction_details["plaintiff_max_bid"] = value
-                    # Handle missing field labels (e.g., city/state/zip row)
-                    elif field == "":
-                        # Assuming it's the city/state/zip row when the label is missing
-                        city_state_zip = value
-                        # Split city, state, and zip
-                        city, state_zip = city_state_zip.split(',', 1)
-                        state, zip_code = state_zip.strip().split('-')
-                        auction_details["city"] = city.strip()
-                        auction_details["state"] = state.strip()
-                        auction_details["zip_code"] = zip_code.strip()
-
-            # Extract sold amount from auction stats
-            sold_amount_element = auction_item.query_selector('.ASTAT_MSGD')
-            auction_info['sold_amount'] = sold_amount_element.inner_text().strip() if sold_amount_element else 'Unknown'
-
-            # Update auction_info with details
-            auction_info.update(auction_details)
+            auction_info.update({
+                "auction_type": auction_details.get("auction_type"),
+                "case_number": auction_details.get("case_#"),
+                "final_judgment_amount": auction_details.get("final_judgment_amount"),
+                "parcel_id": auction_details.get("parcel_id"),
+                "property_address": auction_details.get("property_address"),
+                "assessed_value": auction_details.get("assessed_value"),
+                "plaintiff_max_bid": auction_details.get("plaintiff_max_bid"),
+                "city": auction_details.get("").split(',')[0].strip() if "" in auction_details else None,
+                "state": auction_details.get("").split(',')[1].strip().split('-')[0].strip() if "" in auction_details else None,
+                "zip_code": auction_details.get("").split(',')[1].strip().split('-')[1].strip() if "" in auction_details else None,
+            })
 
             auction_data.append(auction_info)
-
-            # Log the extracted auction information
             logging.info(f"Extracted auction info: {auction_info}")
 
-    # Log if no '3rd Party Bidder' auctions were found
     if not auction_data:
         logging.info("No 3rd Party Bidder found")
     
     return auction_data
 
-
-def get_data(urls: list):
+def get_data(urls):
     """ Get auction data only for 3rd Party Bidders. """
     data = []
-    # open browser
     with sync_playwright() as p:
         browser = p.firefox.launch()
         page = browser.new_page()
         page.set_default_timeout(60000)
-        
+
         for url in urls:
-            # access page
             logging.debug(f"GET {url} | LEVEL 2")
             try:
                 page.goto(url)
                 page.wait_for_selector('#Area_C > .AUCTION_ITEM.PREVIEW')
                 auction_data = scrape_auction_items(page)
-                data.extend(auction_data)  # Only add 3rd Party Bidder data
+                data.extend(auction_data)
             except Exception as e:
                 logging.warning(f"Failed to GET {url}: {e}")
-                continue
-        
-        # close browser
+
         browser.close()
-        
+    
     return data
+
 
 
 if __name__ == '__main__':
