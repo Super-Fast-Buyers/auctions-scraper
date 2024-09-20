@@ -127,25 +127,32 @@ def scrape_auction_items(page: Page):
                 value = auction_values[i].inner_text().strip()
 
                 # Map specific fields to desired format
-                if field == "case_#":
+                if field == "auction_type":
+                    auction_details["auction_type"] = value
+                elif field == "case_#":
                     auction_details["case_number"] = value
+                elif field == "final_judgment_amount":
+                    auction_details["final_judgment_amount"] = value
                 elif field == "parcel_id":
                     auction_details["parcel_id"] = value
                 elif field == "property_address":
                     auction_details["property_address"] = value
                 elif field == "assessed_value":
                     auction_details["assessed_value"] = value
-                elif field == "final_judgment_amount":
-                    auction_details["sold_amount"] = value
-                elif field == "auction_type":
-                    auction_details["auction_type"] = value
                 elif field == "plaintiff_max_bid":
                     auction_details["plaintiff_max_bid"] = value
-                # Add any other fields needed...
 
+            # Extract sold amount from auction stats
+            sold_amount_element = auction_item.query_selector('.ASTAT_MSGD')
+            auction_info['sold_amount'] = sold_amount_element.inner_text().strip() if sold_amount_element else 'Unknown'
+
+            # Update auction_info with details
             auction_info.update(auction_details)
 
             auction_data.append(auction_info)
+
+            # Log the extracted auction information
+            logging.info(f"Extracted auction info: {auction_info}")
 
     # Log if no '3rd Party Bidder' auctions were found
     if not auction_data:
