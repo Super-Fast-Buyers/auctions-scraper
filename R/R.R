@@ -155,7 +155,7 @@ push_auction <- function(category) {
       "Address",
       "City",
       "State",
-      "Zip",   # Added plaintiff max bid
+      "Zip"  # Added plaintiff max bid
     )
   }else{ # taxdeed
     names(auction_data) <- c(
@@ -174,7 +174,7 @@ push_auction <- function(category) {
       "Address",
       "City",
       "State",
-      "Zip",
+      "Zip"
     )
   }
 
