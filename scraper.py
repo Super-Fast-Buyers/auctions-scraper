@@ -18,7 +18,7 @@ def scrape(category:str, output:str):
 
 if __name__ == '__main__':
     scrape('foreclose', 'history/foreclose.json') 
-    # scrape('taxdeed', 'history/taxdeed.json')
+    scrape('taxdeed', 'history/taxdeed.json')
 
 
 

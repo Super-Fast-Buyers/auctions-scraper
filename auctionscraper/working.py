@@ -6,16 +6,20 @@ import re
 # Logger
 logging.basicConfig(level=logging.DEBUG)
 
+
 def read_txt(txt: str):
     """ Read subdomain (county) from txt file """
     with open(txt, 'r') as f:
         return [line.strip() for line in f.readlines()]
 
+
 def create_baseurl(subdomain: str, category: str) -> str:
     """ Create calendar URL """
     if category not in ['foreclose', 'taxdeed']:
-        return 'Please define "foreclose" or "taxdeed" in category argument'
-    return f"https://{subdomain}.real{category}.com/index.cfm?zaction=USER&zmethod=CALENDAR"
+        return('Please define "foreclose" or "taxdeed" in category argument')
+    else:
+        return f"https://{subdomain}.real{category}.com/index.cfm?zaction=USER&zmethod=CALENDAR"
+
 
 def create_calendar_url(baseurl:str, days=0) -> list:
     """ Get calendar pages to be scraped """
@@ -41,6 +45,7 @@ def get_calendar_list(category: str, days: int) -> list:
         calendar_url += create_calendar_url(baseurl, days=days)
     return calendar_url
 
+
 def parse_box(page: Page) -> list:
     """Parse URLs from the calendar page for auction schedules."""
     calendar_boxes = page.query_selector_all('div[class*=CALSEL], div[class*=CALSCH]')  # Include both CALSEL and CALSCH
@@ -63,14 +68,16 @@ def parse_box(page: Page) -> list:
     return box_urls
 
 
+
 def get_box_list(urls: list) -> list:
-    """ Get box URLs from calendar pages and check for active auctions. """
+    """Get box URLs from calendar pages and check for active auctions."""
     data = []
+    
     with sync_playwright() as p:
         browser = p.firefox.launch()
         page = browser.new_page()
-        page.set_default_timeout(90000)
-
+        page.set_default_timeout(60000)
+        
         for url in urls:
             logging.debug(f"GET {url} | LEVEL 1")
             try:
@@ -86,30 +93,7 @@ def get_box_list(urls: list) -> list:
     return data
 
 
-    """ Get auction data only for 3rd Party Bidders. """
-    data = []
-    with sync_playwright() as p:
-        browser = p.firefox.launch()
-        page = browser.new_page()
-        page.set_default_timeout(60000)
-
-        for url in urls:
-            logging.debug(f"GET {url} | LEVEL 2")
-            try:
-                page.goto(url)
-                page.wait_for_selector('#Area_C > .AUCTION_ITEM.PREVIEW')
-                auction_data = scrape_auction_items(page)
-                data.extend(auction_data)
-            except Exception as e:
-                logging.warning(f"Failed to GET {url}: {e}")
-
-        browser.close()
-    
-    return data
-
-
-
-def scrape_auction_items(page):
+def scrape_auction_items(page: Page):
     """Scrape auction items from the current page, focusing only on '3rd Party Bidder' data."""
     auction_items = page.query_selector_all('#Area_C .AUCTION_ITEM.PREVIEW')
     auction_data = []
@@ -124,30 +108,14 @@ def scrape_auction_items(page):
             # Extract auction date and time
             auction_date_time_element = auction_item.query_selector('.ASTAT_MSGB')
             auction_date_time = auction_date_time_element.inner_text().strip() if auction_date_time_element else 'Unknown'
-
             auction_date, auction_time = auction_date_time.split(' ', 1) if ' ' in auction_date_time else (auction_date_time, 'Unknown')
 
             # Initialize auction info
             auction_info = {
-    'auction_date': auction_date,
-    'auction_time': auction_time,
-    'sold_to': sold_to,
-    'sold_amount': "Not Found",
-    'auction_type': "Not Found",
-    'case_number': "Not Found",
-    'final_judgment_amount': "Not Found",
-    'parcel_id': "Not Found",
-    'property_address': "Not Found", 
-    'city': "Not Found",
-    'state': "Not Found",
-    'zip_code': "Not Found",
-    'assessed_value': "Not Found",
-    'plaintiff_max_bid': "Not Found",
-    'opening_bid': "Not Found",  # Add a comma here
-    'surplus_amount': "Not Found",  # Add a colon here
-    'certificate_number': "Not Found",
-}
-
+                'auction_date': auction_date,
+                'auction_time': auction_time,
+                'sold_to': sold_to
+            }
 
             # Extract auction details from the table
             auction_details = {}
@@ -168,10 +136,6 @@ def scrape_auction_items(page):
                         auction_details["case_number"] = value
                     elif field == "final_judgment_amount":
                         auction_details["final_judgment_amount"] = value
-                    elif field == "certificate_#":
-                        auction_info["certificate_number"] = value
-                    elif field == "opening_bid":
-                        auction_details["opening_bid"] = value
                     elif field == "parcel_id":
                         auction_details["parcel_id"] = value
                     elif field == "property_address":
@@ -180,48 +144,23 @@ def scrape_auction_items(page):
                         auction_details["assessed_value"] = value
                     elif field == "plaintiff_max_bid":
                         auction_details["plaintiff_max_bid"] = value
-                    
                     # Handle missing field labels (e.g., city/state/zip row)
                     elif field == "":
-                        try:
-                            # Assuming it's the city/state/zip row when the label is missing
-                            city_state_zip = value
-                            # Split city, state, and zip
-                            city, state_zip = city_state_zip.split(',', 1)
-                            state, zip_code = state_zip.strip().split('-')
-                            auction_details["city"] = city.strip()
-                            auction_details["state"] = state.strip()
-                            auction_details["zip_code"] = zip_code.strip()
-                        except ValueError:
-                            logging.warning(f"Could not parse city, state, and zip from: {value}")
-                            auction_details["city_state_zip"] = value
+                        # Assuming it's the city/state/zip row when the label is missing
+                        city_state_zip = value
+                        # Split city, state, and zip
+                        city, state_zip = city_state_zip.split(',', 1)
+                        state, zip_code = state_zip.strip().split('-')
+                        auction_details["city"] = city.strip()
+                        auction_details["state"] = state.strip()
+                        auction_details["zip_code"] = zip_code.strip()
 
             # Extract sold amount from auction stats
             sold_amount_element = auction_item.query_selector('.ASTAT_MSGD')
             auction_info['sold_amount'] = sold_amount_element.inner_text().strip() if sold_amount_element else 'Unknown'
-            
 
             # Update auction_info with details
             auction_info.update(auction_details)
-
-              # Extract and calculate the difference between final_judgment_amount and plaintiff_max_bid
-            try:
-                # Convert amounts to float if available
-                sold_amount = float(auction_info['sold_amount'].replace("$", "").replace(",", "")) if auction_info['sold_amount'] != "Unknown" else None
-                opening_bid = float(auction_info['opening_bid'].replace("$", "").replace(",", "")) if auction_info['opening_bid'] != "Not Found" else None
-                final_judgment_amount = float(auction_info['final_judgment_amount'].replace("$", "").replace(",", "")) if auction_info['final_judgment_amount'] != "Not Found" else None
-               
-                # Calculate surplus_amount
-                if sold_amount is not None and final_judgment_amount is not None:
-                    auction_info['surplus_amount'] = sold_amount - final_judgment_amount
-                elif opening_bid is not None and sold_amount is not None:
-                    auction_info['surplus_amount'] = sold_amount - opening_bid
-                else:
-                    auction_info['surplus_amount'] = "Not Calculable"
-              
-            except ValueError as e:
-                auction_info['surplus_amount'] = "Not Calculable"
-                logging.warning(f"Could not calculate surplus_amount for auction: {auction_info['case_number']}, Error: {e}")
 
             auction_data.append(auction_info)
 
@@ -240,24 +179,18 @@ def get_data(urls: list):
     data = []
     # open browser
     with sync_playwright() as p:
-        browser = p.firefox.launch(headless=True)  # Use headless mode for performance
+        browser = p.firefox.launch()
         page = browser.new_page()
-        page.set_default_timeout(60000)  # Default timeout
-
+        page.set_default_timeout(60000)
+        
         for url in urls:
             # access page
             logging.debug(f"GET {url} | LEVEL 2")
             try:
                 page.goto(url)
-                page.wait_for_load_state('networkidle')  # Wait for page to fully load
-
-                # Check if the auction items selector is present
-                if page.query_selector('#Area_C > .AUCTION_ITEM.PREVIEW'):
-                    auction_data = scrape_auction_items(page)
-                    data.extend(auction_data)  # Only add 3rd Party Bidder data
-                else:
-                    logging.info(f"No auction items found on page: {url}")
-
+                page.wait_for_selector('#Area_C > .AUCTION_ITEM.PREVIEW')
+                auction_data = scrape_auction_items(page)
+                data.extend(auction_data)  # Only add 3rd Party Bidder data
             except Exception as e:
                 logging.warning(f"Failed to GET {url}: {e}")
                 continue
@@ -266,5 +199,7 @@ def get_data(urls: list):
         browser.close()
         
     return data
+
+
 if __name__ == '__main__':
     pass

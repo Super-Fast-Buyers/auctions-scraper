@@ -1,15 +1,21 @@
-name: scraper-test
+name: scraper-test-3rd-bidder
 
 on:
   push:
     branches:
       - 'scrapdev2'
-  schedule:
-    - cron: '0 4 * * 3' # in the midnight of Wednesday UTC-4 (Wed 04.00 AM UTC)
-    - cron: '0 4 * * 5' # Friday
   workflow_dispatch:
-  
+
 jobs:
+  scheduled_job:
+    if: github.ref == 'refs/heads/scrapdev2' # Only run on 'scrapdev2' branch
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      # Add your job steps here
+
   scraping:
     runs-on: ubuntu-latest
     
@@ -52,6 +58,6 @@ jobs:
         run: | 
           echo $SECRET_TOKEN >> $CRED_PATH
           Rscript foreclose.R
-          # Rscript taxdeed.R
+          Rscript taxdeed.R
           rm $CRED_PATH
 
