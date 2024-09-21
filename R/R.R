@@ -27,15 +27,15 @@ json2tbl <- function(json, category) {
         sold_to,                # Include buyer info
         sold_amount,            # Include sold amount
         judgment_amount = final_judgment_amount,
+        assessed_value,         # Include assessed value
+        plaintiff_max_bid,      # Include plaintiff's max bid # nolint
+        surplus_amount,
         case_number,            # Include case number
         parcel_id,              # Include parcel ID
         address = property_address,
         city,
         state,
-        zip = zip_code,         # Use the updated zip_code field
-        assessed_value,         # Include assessed value
-        plaintiff_max_bid,      # Include plaintiff's max bid # nolint
-        surplus_amount
+        zip = zip_code        # Use the updated zip_code field
       )
   } else { # TAXDEED
     data <- data %>%
@@ -45,16 +45,16 @@ json2tbl <- function(json, category) {
         sold_to,                # Include buyer info
         sold_amount,            # Include sold amount
         opening_bid,
+        assessed_value,         # Include assessed value
+        opening_bid,
+        surplus_amount,      # Include plaintiff's max bid
         case_number,
         certificate_number,            # Include case number
         parcel_id,              # Include parcel ID
         address = property_address,
         city,
         state,
-        zip = zip_code,         # Use the updated zip_code field
-        assessed_value,         # Include assessed value
-        opening_bid,
-        surplus_amount      # Include plaintiff's max bid
+        zip = zip_code         # Use the updated zip_code field
       )
   }
 
@@ -141,41 +141,39 @@ push_auction <- function(category) {
   # Rename columns based on category (foreclose or taxdeed)
   if (category == "foreclose") {
     names(auction_data) <- c(
-      "Date Added",
-      "Auction Date",
-      "Auction Time",
-      "Auction Type",        # Added auction time
-      "Sold To",
-      "Assessed Value",      # Added assessed_value
-      "Plaintiff Max Bid",   # Added sold_to
-      "Sold Amount",         # Added sold_amount
-      "Judgment Amount",
-      "Surplus Amount",
-      "Case Number",         # Added case number
-      "Parcel ID",           # Added parcel_id
-      "Address",
-      "City",
-      "State",
-      "Zip"                  # Added plaintiff max bid
+        "Auction Type",
+        "Auction Date",
+        "Auction Time",           # Include auction time
+        "Buyer",                # Include buyer info
+        "Sold Amount",            # Include sold amount
+        "Judgment Amount",
+        "Assessed Value",         # Include assessed value
+        "Plaintiff Max Bid",      # Include plaintiff's max bid # nolint
+        "Surplus Amount",
+        "Case No",            # Include case number
+        "Parcel ID",              # Include parcel ID
+        "Address",
+        "City",
+        "State",
+        "ZIP"          # Added plaintiff max bid
     )
   } else { # taxdeed
     names(auction_data) <- c(
-      "Date Added",
-      "Auction Date",
-      "Auction Time",
-      "Auction Type",        # Added auction time
-      "Sold To",
-      "Assessed Value",      # Added assessed_value
-      "Sold Amount",         # Added sold_amount
-      "Opening Bid",
-      "Surplus Amount",
-      "Case Number",
-      "Certificate Number",  # Added case number
-      "Parcel ID",           # Added parcel_id
-      "Address",
-      "City",
-      "State",
-      "Zip"
+        "Auction Date",
+        "Auction Time",           # Include auction time
+        "Sold To",                # Include buyer info
+        "Sold Amount",            # Include sold amount
+        "Opening Bid",
+        "Assessed Value",         # Include assessed value
+        "Opening Bid",
+        "Surplus Amount",      # Include plaintiff's max bid
+        "Case No",
+        "Certificate No",            # Include case number
+        "Parcel ID",              # Include parcel ID
+        "Address",
+        "City",
+        "State",
+        "ZIP"         # Use the updated zip_code field
     )
   }
 
