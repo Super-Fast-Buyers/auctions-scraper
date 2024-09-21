@@ -138,6 +138,7 @@ save_auction_csv <- function(new_data, category) {
 #'
 push_auction <- function(category) {
   auction_data <- readRDS(paste0(category, ".rds"))
+  # Rename columns based on category (foreclose or taxdeed)
   if (category == "foreclose") {
     names(auction_data) <- c(
       "Date Added",
@@ -146,7 +147,7 @@ push_auction <- function(category) {
       "Auction Type",        # Added auction time
       "Sold To",
       "Assessed Value",      # Added assessed_value
-      "Plaintiff Max Bid",            # Added sold_to
+      "Plaintiff Max Bid",   # Added sold_to
       "Sold Amount",         # Added sold_amount
       "Judgment Amount",
       "Surplus Amount",
@@ -155,21 +156,21 @@ push_auction <- function(category) {
       "Address",
       "City",
       "State",
-      "Zip"  # Added plaintiff max bid
+      "Zip"                  # Added plaintiff max bid
     )
-  }else{ # taxdeed
+  } else { # taxdeed
     names(auction_data) <- c(
-       "Date Added",
+      "Date Added",
       "Auction Date",
       "Auction Time",
-      "Auction Type",      # Added auction time
+      "Auction Type",        # Added auction time
       "Sold To",
-      "Assessed Value",      # Added assessed_value             # Added sold_to
+      "Assessed Value",      # Added assessed_value
       "Sold Amount",         # Added sold_amount
       "Opening Bid",
       "Surplus Amount",
       "Case Number",
-      "Certificate Number",        # Added case number
+      "Certificate Number",  # Added case number
       "Parcel ID",           # Added parcel_id
       "Address",
       "City",
@@ -178,15 +179,30 @@ push_auction <- function(category) {
     )
   }
 
+  # Authenticate with Google Sheets
   gs4_auth(path = Sys.getenv("CRED_PATH"))
+  
   tryCatch({
-    if (Sys.getenv(paste0("SHEETS_", toupper(category))) == "") {
-      sheet_write(auction_data, Sys.getenv("SHEETS_TEST"), "Raw")
-    }else {
-      sheet_write(auction_data, Sys.getenv(paste0("SHEETS_", toupper(category))), "Raw")
+    # Determine the sheet ID and the sheet tab name based on category
+    sheet_id <- Sys.getenv(paste0("SHEETS_", toupper(category)))
+    sheet_tab <- if (category == "foreclose") "3rd Bidders Foreclose" else "3rd Bidder Taxdeeds"
+    
+    # If the specific SHEETS environment variable is empty, fall back to the test sheet
+    if (sheet_id == "") {
+      sheet_write(auction_data, Sys.getenv("SHEETS_TEST"), sheet_tab)
+    } else {
+      sheet_write(auction_data, sheet_id, sheet_tab)
     }
-    msg <- sprintf("%s data is now available on Google Sheets!", toupper(category))
+    
+    # Success message
+    msg <- sprintf("%s data is now available on the '%s' tab in Google Sheets!", toupper(category), sheet_tab)
     message(msg)
-  }, error = function(e) message("CANNOT send data to Google Sheets!"))
+    
+  }, error = function(e) {
+    # Error handling
+    message("CANNOT send data to Google Sheets!")
+  })
+  
+  # Deauthenticate
   gs4_deauth()
 }
