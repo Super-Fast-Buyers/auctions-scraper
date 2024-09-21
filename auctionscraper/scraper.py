@@ -17,20 +17,47 @@ def create_baseurl(subdomain: str, category: str) -> str:
         return 'Please define "foreclose" or "taxdeed" in category argument'
     return f"https://{subdomain}.real{category}.com/index.cfm?zaction=USER&zmethod=CALENDAR"
 
-def create_calendar_url(baseurl:str, days=0) -> list:
-    """ Get calendar pages to be scraped """
+from datetime import date, timedelta
+
+def create_calendar_url(baseurl: str, days=0) -> list:
+    """ Generate calendar URLs for 90 days in the past and 90 days in the future. """
     tday = date.today() + timedelta(days=days)
     days_out = 90
     calendar = []
-    month = []
+    months_seen = set()  # Track months already processed
+
+    # Loop for 90 days into the past
+    for day in range(-days_out, 0, 28):
+        calendar_date = tday + timedelta(days=day)
+        month = calendar_date.strftime('%m')  # Get the month in 'MM' format
+
+        if month not in months_seen:
+            months_seen.add(month)
+            date_url = calendar_date.strftime('%m/%d/%Y')
+
+            # Adjust the URL concatenation logic to ensure proper URL structure
+            separator = '&' if '?' in baseurl else '?'
+            full_url = f"{baseurl}{separator}selCalDate={date_url}"
+
+            calendar.append(full_url)
+
+    # Loop for 90 days into the future
     for day in range(0, days_out, 28):
         calendar_date = tday + timedelta(days=day)
-        index = calendar_date.strftime('%m/%d/%Y').split('/')[0]
-        if index not in month:
-            month.append(index)
+        month = calendar_date.strftime('%m')  # Get the month in 'MM' format
+
+        if month not in months_seen:
+            months_seen.add(month)
             date_url = calendar_date.strftime('%m/%d/%Y')
-            calendar.append(baseurl + "&selCalDate=" + date_url)
+
+            # Adjust the URL concatenation logic to ensure proper URL structure
+            separator = '&' if '?' in baseurl else '?'
+            full_url = f"{baseurl}{separator}selCalDate={date_url}"
+
+            calendar.append(full_url)
+
     return calendar
+
 
 
 def get_calendar_list(category: str, days: int) -> list:
