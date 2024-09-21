@@ -165,7 +165,6 @@ push_auction <- function(category) {
         "Sold Amount",            # Include sold amount
         "Opening Bid",
         "Assessed Value",         # Include assessed value
-        "Opening Bid",
         "Surplus Amount",      # Include plaintiff's max bid
         "Case No",
         "Certificate No",            # Include case number
