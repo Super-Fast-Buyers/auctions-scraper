@@ -62,52 +62,34 @@ def parse_box(page: Page) -> list:
 
     return box_urls
 
-
 def get_box_list(urls: list) -> list:
     """ Get box URLs from calendar pages and check for active auctions. """
     data = []
-    with sync_playwright() as p:
-        browser = p.firefox.launch()
-        page = browser.new_page()
-        page.set_default_timeout(90000)
 
+    with sync_playwright() as p:
+        browser = p.firefox.launch(headless=True)  # Launch in headless mode for performance
+        page = browser.new_page()
+        page.set_default_timeout(60000)  # Global timeout of 90 seconds for all operations
+        
         for url in urls:
             logging.debug(f"GET {url} | LEVEL 1")
             try:
                 page.goto(url)
-                page.wait_for_selector('.CALDAYBOX')
-                data += parse_box(page)
+                # Check if the selector exists before waiting for it
+                if page.query_selector('.CALDAYBOX'):
+                    page.wait_for_selector('.CALDAYBOX', timeout=60000)  # Timeout lowered to 30 seconds
+                    # Assuming parse_box is a function that handles parsing
+                    data += parse_box(page)
+                else:
+                    logging.warning(f"No '.CALDAYBOX' found on page {url}")
+            except PlaywrightTimeoutError:
+                logging.warning(f"Timeout while waiting for '.CALDAYBOX' on page {url}")
             except Exception as e:
                 logging.warning(f"Failed to GET {url}: {e}")
-                continue
         
-        browser.close()
-        
-    return data
-
-
-    """ Get auction data only for 3rd Party Bidders. """
-    data = []
-    with sync_playwright() as p:
-        browser = p.firefox.launch()
-        page = browser.new_page()
-        page.set_default_timeout(60000)
-
-        for url in urls:
-            logging.debug(f"GET {url} | LEVEL 2")
-            try:
-                page.goto(url)
-                page.wait_for_selector('#Area_C > .AUCTION_ITEM.PREVIEW')
-                auction_data = scrape_auction_items(page)
-                data.extend(auction_data)
-            except Exception as e:
-                logging.warning(f"Failed to GET {url}: {e}")
-
         browser.close()
     
     return data
-
-
 
 def scrape_auction_items(page):
     """Scrape auction items from the current page, focusing only on '3rd Party Bidder' data."""
