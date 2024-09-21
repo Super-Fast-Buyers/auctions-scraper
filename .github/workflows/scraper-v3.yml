@@ -3,7 +3,6 @@ name: scraper-3rd-bidder
 on:
   schedule:
     - cron: '0 23 * * 1-5' # 11:00 PM UTC (6:00 PM EST) every weekday (Monday to Friday)
-  workflow_dispatch: # Allows manual trigger from GitHub UI
 
 jobs:
   scheduled_job:
@@ -13,6 +12,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+        with:
+          ref: scrapdev2 # Checkout scrapdev2 branch
       # Add your job steps here
 
   scraping:
@@ -21,6 +22,8 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
+        with:
+          ref: scrapdev2 # Checkout scrapdev2 branch
       
       - name: Setup python
         uses: actions/setup-python@v4
@@ -35,7 +38,7 @@ jobs:
       
       - name: Run scraper
         run: python scraper.py
-                
+          
       - name: Commit result
         run: |
           git config user.name "github-actions[bot]"
@@ -44,7 +47,7 @@ jobs:
           timestamp=$(TZ='America/New_York' date +'%a, %F at %H:%M %Z')
           git commit -m "Scraping updated: ${timestamp}" || exit 0
           git push
-  
+
   forwarding:
     runs-on: ubuntu-latest
     needs: scraping
@@ -52,7 +55,9 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
-            
+        with:
+          ref: scrapdev2 # Checkout scrapdev2 branch
+          
       - name: Setup R
         uses: r-lib/actions/setup-r@v2
         with:
@@ -88,4 +93,3 @@ jobs:
           timestamp=$(TZ='America/New_York' date +'%a, %F at %H:%M %Z')
           git commit -m "Data updated: ${timestamp}" || exit 0
           git push
-
