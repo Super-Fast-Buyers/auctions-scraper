@@ -1,6 +1,9 @@
 name: scraper-3rd-bidder
 
 on:
+  push:
+    branches:
+      - 'scrapdev2'
   schedule:
     - cron: '0 23 * * 1-5' # 11:00 PM UTC (6:00 PM EST) every weekday (Monday to Friday)
 
