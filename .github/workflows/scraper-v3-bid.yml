@@ -8,20 +8,10 @@ on:
     - cron: '0 23 * * 1-5' # 11:00 PM UTC (6:00 PM EST) every weekday (Monday to Friday)
 
 jobs:
-  scheduled_job:
+  scraping:
     if: github.ref == 'refs/heads/scrapdev2' # Only run on 'scrapdev2' branch
     runs-on: ubuntu-latest
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-        with:
-          ref: scrapdev2 # Checkout scrapdev2 branch
-      # Add your job steps here
-
-  scraping:
-    runs-on: ubuntu-latest
-    
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
