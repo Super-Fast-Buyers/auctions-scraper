@@ -1,7 +1,7 @@
 from playwright.sync_api import sync_playwright, Page
 from datetime import date, timedelta
 import logging
-import re
+import time
 
 # Logger
 logging.basicConfig(level=logging.DEBUG)
@@ -16,8 +16,6 @@ def create_baseurl(subdomain: str, category: str) -> str:
     if category not in ['foreclose', 'taxdeed']:
         return 'Please define "foreclose" or "taxdeed" in category argument'
     return f"https://{subdomain}.real{category}.com/index.cfm?zaction=USER&zmethod=CALENDAR"
-
-from datetime import date, timedelta
 
 def create_calendar_url(baseurl: str, days=0) -> list:
     """ Generate calendar URLs for 90 days in the past and 90 days in the future. """
@@ -58,8 +56,6 @@ def create_calendar_url(baseurl: str, days=0) -> list:
 
     return calendar
 
-
-
 def get_calendar_list(category: str, days: int) -> list:
     """ Get calendar url list to be scraped """
     calendar_url = []
@@ -96,7 +92,7 @@ def get_box_list(urls: list) -> list:
     with sync_playwright() as p:
         browser = p.firefox.launch(headless=True)  # Launch in headless mode for performance
         page = browser.new_page()
-        page.set_default_timeout(60000)  # Global timeout of 90 seconds for all operations
+        page.set_default_timeout(60000)  # Global timeout of 60 seconds for all operations
         
         for url in urls:
             logging.debug(f"GET {url} | LEVEL 1")
@@ -104,13 +100,10 @@ def get_box_list(urls: list) -> list:
                 page.goto(url)
                 # Check if the selector exists before waiting for it
                 if page.query_selector('.CALDAYBOX'):
-                    page.wait_for_selector('.CALDAYBOX', timeout=60000)  # Timeout lowered to 30 seconds
-                    # Assuming parse_box is a function that handles parsing
+                    page.wait_for_selector('.CALDAYBOX', timeout=60000)  # Timeout of 60 seconds
                     data += parse_box(page)
                 else:
                     logging.warning(f"No '.CALDAYBOX' found on page {url}")
-            except PlaywrightTimeoutError:
-                logging.warning(f"Timeout while waiting for '.CALDAYBOX' on page {url}")
             except Exception as e:
                 logging.warning(f"Failed to GET {url}: {e}")
         
@@ -124,53 +117,42 @@ def scrape_auction_items(page):
     auction_data = []
 
     for auction_item in auction_items:
-        # Extract the Sold To field
         sold_to_element = auction_item.query_selector('.ASTAT_MSG_SOLDTO_MSG')
         sold_to = sold_to_element.inner_text().strip() if sold_to_element else None
 
-        # Check if the auction was sold to a "3rd Party Bidder"
         if sold_to and "3rd Party Bidder" in sold_to:
-            # Extract auction date and time
             auction_date_time_element = auction_item.query_selector('.ASTAT_MSGB')
             auction_date_time = auction_date_time_element.inner_text().strip() if auction_date_time_element else 'Unknown'
-
             auction_date, auction_time = auction_date_time.split(' ', 1) if ' ' in auction_date_time else (auction_date_time, 'Unknown')
 
-            # Initialize auction info
             auction_info = {
-    'auction_date': auction_date,
-    'auction_time': auction_time,
-    'sold_to': sold_to,
-    'sold_amount': "Not Found",
-    'auction_type': "Not Found",
-    'case_number': "Not Found",
-    'final_judgment_amount': "Not Found",
-    'parcel_id': "Not Found",
-    'property_address': "Not Found", 
-    'city': "Not Found",
-    'state': "Not Found",
-    'zip_code': "Not Found",
-    'assessed_value': "Not Found",
-    'plaintiff_max_bid': "Not Found",
-    'opening_bid': "Not Found",  # Add a comma here
-    'surplus_amount': "Not Found",  # Add a colon here
-    'certificate_number': "Not Found",
-}
+                'auction_date': auction_date,
+                'auction_time': auction_time,
+                'sold_to': sold_to,
+                'sold_amount': "Not Found",
+                'auction_type': "Not Found",
+                'case_number': "Not Found",
+                'final_judgment_amount': "Not Found",
+                'parcel_id': "Not Found",
+                'property_address': "Not Found", 
+                'city': "Not Found",
+                'state': "Not Found",
+                'zip_code': "Not Found",
+                'assessed_value': "Not Found",
+                'plaintiff_max_bid': "Not Found",
+                'opening_bid': "Not Found",
+                'surplus_amount': "Not Found",
+                'certificate_number': "Not Found",
+            }
 
-
-            # Extract auction details from the table
             auction_details = {}
             auction_rows = auction_item.query_selector_all('tr')
-
             for row in auction_rows:
                 field_element = row.query_selector('th')
                 value_element = row.query_selector('td')
-                
                 if field_element and value_element:
                     field = field_element.inner_text().strip().lower().replace(':', '').replace(' ', '_')
                     value = value_element.inner_text().strip()
-
-                    # Map specific fields to desired format
                     if field == "auction_type":
                         auction_details["auction_type"] = value
                     elif field == "case_#":
@@ -189,13 +171,9 @@ def scrape_auction_items(page):
                         auction_details["assessed_value"] = value
                     elif field == "plaintiff_max_bid":
                         auction_details["plaintiff_max_bid"] = value
-                    
-                    # Handle missing field labels (e.g., city/state/zip row)
                     elif field == "":
                         try:
-                            # Assuming it's the city/state/zip row when the label is missing
                             city_state_zip = value
-                            # Split city, state, and zip
                             city, state_zip = city_state_zip.split(',', 1)
                             state, zip_code = state_zip.strip().split('-')
                             auction_details["city"] = city.strip()
@@ -205,75 +183,93 @@ def scrape_auction_items(page):
                             logging.warning(f"Could not parse city, state, and zip from: {value}")
                             auction_details["city_state_zip"] = value
 
-            # Extract sold amount from auction stats
             sold_amount_element = auction_item.query_selector('.ASTAT_MSGD')
             auction_info['sold_amount'] = sold_amount_element.inner_text().strip() if sold_amount_element else 'Unknown'
-            
-
-            # Update auction_info with details
             auction_info.update(auction_details)
 
-              # Extract and calculate the difference between final_judgment_amount and plaintiff_max_bid
             try:
-                # Convert amounts to float if available
                 sold_amount = float(auction_info['sold_amount'].replace("$", "").replace(",", "")) if auction_info['sold_amount'] != "Unknown" else None
                 opening_bid = float(auction_info['opening_bid'].replace("$", "").replace(",", "")) if auction_info['opening_bid'] != "Not Found" else None
                 final_judgment_amount = float(auction_info['final_judgment_amount'].replace("$", "").replace(",", "")) if auction_info['final_judgment_amount'] != "Not Found" else None
-               
-                # Calculate surplus_amount
+
+                surplus_amount = None  # Initialize the variable for surplus amount
+
                 if sold_amount is not None and final_judgment_amount is not None:
-                    auction_info['surplus_amount'] = sold_amount - final_judgment_amount
+                    surplus_amount = sold_amount - final_judgment_amount
                 elif opening_bid is not None and sold_amount is not None:
-                    auction_info['surplus_amount'] = sold_amount - opening_bid
+                    surplus_amount = sold_amount - opening_bid
                 else:
                     auction_info['surplus_amount'] = "Not Calculable"
-              
+
+                if surplus_amount is not None:
+                    auction_info['surplus_amount'] = f"${surplus_amount:,.2f}"  # Format with dollar sign and two decimal places
+                else:
+                    auction_info['surplus_amount'] = "Not Calculable"
             except ValueError as e:
                 auction_info['surplus_amount'] = "Not Calculable"
                 logging.warning(f"Could not calculate surplus_amount for auction: {auction_info['case_number']}, Error: {e}")
 
             auction_data.append(auction_info)
-
-            # Log the extracted auction information
             logging.info(f"Extracted auction info: {auction_info}")
 
-    # Log if no '3rd Party Bidder' auctions were found
     if not auction_data:
         logging.info("No 3rd Party Bidder found")
-    
     return auction_data
-
 
 def get_data(urls: list):
     """ Get auction data only for 3rd Party Bidders. """
     data = []
-    # open browser
     with sync_playwright() as p:
-        browser = p.firefox.launch(headless=True)  # Use headless mode for performance
+        browser = p.firefox.launch(headless=True)
         page = browser.new_page()
-        page.set_default_timeout(60000)  # Default timeout
+        page.set_default_timeout(60000)
 
         for url in urls:
-            # access page
-            logging.debug(f"GET {url} | LEVEL 2")
             try:
                 page.goto(url)
-                page.wait_for_load_state('networkidle')  # Wait for page to fully load
+                page.wait_for_load_state('networkidle')
 
-                # Check if the auction items selector is present
-                if page.query_selector('#Area_C > .AUCTION_ITEM.PREVIEW'):
-                    auction_data = scrape_auction_items(page)
-                    data.extend(auction_data)  # Only add 3rd Party Bidder data
-                else:
-                    logging.info(f"No auction items found on page: {url}")
+                # Find the total number of pages
+                max_page_element = page.query_selector('#maxCA')
+                if not max_page_element:
+                    logging.warning(f"No pagination info found on page: {url}")
+                    continue
+
+                try:
+                    max_page = int(max_page_element.inner_text().strip())
+                    logging.info(f"Found {max_page} pages for URL: {url}")
+                except ValueError:
+                    logging.warning(f"Could not parse max pages from element on page: {url}")
+                    continue
+
+                for page_num in range(1, max_page + 1):
+                    logging.debug(f"Processing page {page_num} of {max_page}")
+
+                    if page.query_selector('#Area_C > .AUCTION_ITEM.PREVIEW'):
+                        auction_data = scrape_auction_items(page)
+                        data.extend(auction_data)
+
+                    # Go to the next page if not on the last page
+                    if page_num < max_page:
+                        cur_page_input = page.query_selector('#curPCA')
+                        if cur_page_input:
+                            try:
+                                cur_page_input.fill(str(page_num + 1))
+                                cur_page_input.press('Enter')
+                                page.wait_for_load_state('networkidle')
+                            except Exception as e:
+                                logging.warning(f"Failed to navigate to page {page_num + 1} for URL: {url}: {e}")
+                                break
+                        else:
+                            logging.warning(f"Could not find page input on page {page_num} for URL: {url}")
+                            break
 
             except Exception as e:
                 logging.warning(f"Failed to GET {url}: {e}")
                 continue
-        
-        # close browser
+
         browser.close()
-        
     return data
+
 if __name__ == '__main__':
     pass
