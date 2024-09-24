@@ -30,7 +30,7 @@ jobs:
           playwright install --with-deps firefox
       
       - name: Run scraper
-        run: python scraper_bid.py
+        run: python scraper.py
           
       - name: Commit result
         run: |
@@ -62,7 +62,7 @@ jobs:
           Rscript -e 'install.packages(c("dplyr", "googlesheets4", "jsonlite"))'
         
       - name: Run wrangler
-        run: Rscript wrangle_bid.R
+        run: Rscript wrangler.R
         
       - name: Run forwarder
         env:
@@ -73,8 +73,8 @@ jobs:
           SHEETS_TEST: ${{ secrets.SHEETS_TEST }}
         run: | 
           echo $SECRET_TOKEN >> $CRED_PATH
-          Rscript foreclose_bid.R
-          Rscript taxdeed_bid.R
+          Rscript foreclose.R
+          Rscript taxdeed.R
           rm $CRED_PATH
         
       - name: Commit data
