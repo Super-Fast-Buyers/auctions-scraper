@@ -1,0 +1,21 @@
+source("R/R.R")
+
+message("------------ FORECLOSE ------------")
+message("Convert raw JSON to CSV")
+auction_foreclose <- json2tbl("history/foreclose_bid.json", "FORECLOSURE")
+save_auction_csv(auction_foreclose_bid, "foreclose")
+message("Combine with previous data")
+foreclose <- combine_data("/foreclose_bid.rds", auction_foreclose_bid)
+saveRDS(foreclose, file = "foreclose_bid.rds")
+
+message("------------- TAXDEED -------------")
+message("Convert raw JSON to CSV")
+auction_taxdeed_bid <- json2tbl("history/taxdeed_bid.json", "TAXDEED")
+save_auction_csv(auction_taxdeed_bid, "taxdeed")
+message("Combine with previous data")
+taxdeed <- combine_data("/taxdeed_bid.rds", auction_taxdeed_bid)
+saveRDS(taxdeed, file = "taxdeed_bid.rds")
+
+message("-----------------------------------")
+message("Wrangler succeed!")
+message("--------------- END ---------------")

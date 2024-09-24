@@ -127,7 +127,7 @@ save_auction_csv <- function(new_data, category) {
   date_created <- format(Sys.Date(), "%Y-%m-%d")
   write.csv(
     x = new_data,
-    file = sprintf("history/%s/auction_%s.csv", category, date_created),
+    file = sprintf("history/%s/auction_bid%s.csv", category, date_created),
     row.names = FALSE,
     na = ""
   )
