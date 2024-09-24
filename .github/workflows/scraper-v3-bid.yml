@@ -5,7 +5,7 @@ on:
     branches:
       - 'scrapdev2'
   schedule:
-    - cron: '0 14 30 * 1-5' # 9:00 PM UTC every weekday (Monday to Friday)
+    - cron: '36 14 * * 1-5' # 9:00 PM UTC every weekday (Monday to Friday)
 
 jobs:
   scraping:
