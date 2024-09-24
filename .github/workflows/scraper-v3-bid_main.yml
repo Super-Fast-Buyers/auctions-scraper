@@ -2,7 +2,7 @@ name: scraper-3rd-bidder-work
 
 on:
   schedule:
-    - cron: '43 14 * * 1-5' # 9:00 PM UTC every weekday (Monday to Friday)
+    - cron: '58 14 * * 1-5' # 9:00 PM UTC every weekday (Monday to Friday)
 
 jobs:
   scraping:
