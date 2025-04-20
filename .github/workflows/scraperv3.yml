@@ -28,36 +28,15 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Fetch latest changes
-          git fetch origin main
-
-          # Ensure we're on main branch
-          git checkout main
-
-          # Reset to match remote main
-          git reset --hard origin/main
-
           # Apply changes
           git add history/*.json
 
-          # Create commit if there are changes
+              # Create commit
           timestamp=$(TZ='America/New_York' date +'%a, %F at %H:%M %Z')
-          if git diff --staged --quiet; then
-            echo "No changes to scraping data"
-            exit 0
-          else
-            git commit -m "Scraping updated: ${timestamp}"
-            # Push with retries
-            for i in {1..3}; do
-              if git pull --rebase && git push; then
-                echo "Push successful"
-                break
-              else
-                echo "Push attempt $i failed, retrying..."
-                sleep 5
-              fi
-            done
-          fi
+          git commit -m "Scraping updated: ${timestamp}" || exit 0
+          
+          # Force push to main branch
+          git push --force origin HEAD:main
 
   forwarding:
     runs-on: ubuntu-latest
@@ -80,24 +59,12 @@ jobs:
           # Reset to match remote main
           git reset --hard origin/main
 
-          # Apply changes
+              # Add your changes
           git add *.rds history/foreclose/*.csv history/taxdeed/*.csv
-
-          # Create commit if there are changes
+          
+          # Create commit
           timestamp=$(TZ='America/New_York' date +'%a, %F at %H:%M %Z')
-          if git diff --staged --quiet; then
-            echo "No changes to processed data"
-            exit 0
-          else
-            git commit -m "Data updated: ${timestamp}"
-            # Push with retries
-            for i in {1..3}; do
-              if git pull --rebase && git push; then
-                echo "Push successful"
-                break
-              else
-                echo "Push attempt $i failed, retrying..."
-                sleep 5
-              fi
-            done
-          fi
+          git commit -m "Data updated: ${timestamp}" || exit 0
+          
+          # Force push to main branch
+          git push --force origin HEAD:main
