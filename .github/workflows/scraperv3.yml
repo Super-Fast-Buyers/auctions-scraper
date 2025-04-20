@@ -32,6 +32,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin ${GITHUB_REF#refs/heads/}
           git add history/*.json
           timestamp=$(TZ='America/New_York' date +'%a, %F at %H:%M %Z')
           git commit -m "Scraping updated: ${timestamp}" || exit 0
