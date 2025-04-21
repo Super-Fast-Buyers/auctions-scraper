@@ -116,60 +116,77 @@ def get_box_list(urls: list) -> list:
 
 def get_data(urls: list):
     """ Get auction data """
+    from playwright.sync_api import TimeoutError
+
     data = []
-    # open browser
     with sync_playwright() as p:
         browser = p.firefox.launch()
         page = browser.new_page()
         page.set_default_timeout(PAGE_DEFAULT_TIMEOUT)
         selector = '#Area_W > .AUCTION_ITEM.PREVIEW'
+
         for url in urls:
-            # access page
             logging.debug(f"GET {url} | LEVEL 2")
-            response_page = page_request(page, url, selector, 5000)
+            try:
+                response_page = page_request(page, url, selector, 5000)
+            except TimeoutError:
+                logging.warning(f'Timeout on {url}')
+                continue
+
             if response_page is None:
                 logging.warning(f'Failed to GET {url}')
                 continue
 
             cards = response_page.query_selector_all('#Area_W > .AUCTION_ITEM.PREVIEW')
+
             for card in cards:
-                # parse date
                 auction_date = re.sub(r'^.+AUCTIONDATE=(\d{2}/\d{2}/\d{4})$', '\\1', url)
-                # parse fields
-                auction_field = []
-                for text in card.query_selector_all('tr > th'):
-                    th = text.inner_text().replace('#', '').replace(':', '').strip()
-                    if th == '':
-                        th = 'city'
-                    th = th.lower().replace(' ', '_')
-                    auction_field.append(th)
-                # parse content
-                auction_content = [text.inner_text().strip() for text in card.query_selector_all('tr > td')]
-                if len(auction_field) == len(auction_content):
-                    auction_info = {auction_field[i]: auction_content[i] for i in range(len(auction_field))}
-                    fields = list(auction_info.keys())
-                    for key in fields:
-                        if key == "city":
-                            city = auction_info[key].split(', ')[0].strip()
-                            zipcode = auction_info[key].split(',')[1].strip()
-                            try:
-                                state = zipcode.split('-')[0].strip()
-                                zipcode = zipcode.split('-')[1].strip()
-                            except:
-                                state = 'FL'
-                                zipcode = zipcode
-                            auction_info.update({
-                                'city': city,
-                                'state': state,
-                                'zipcode': zipcode,
-                                'auction_date': auction_date,
-                            })
-                else:
-                    logging.warning(f"Length of information's fields and contents doesn't matches: {url}")
-                    continue
+                rows = card.query_selector_all('table.ad_tab tr')
+
+                auction_info = {}
+                pending_label = None
+
+                for row in rows:
+                    cells = row.query_selector_all('td')
+                    if len(cells) != 2:
+                        continue
+
+                    label = cells[0].inner_text().strip().replace(":", "")
+                    value = cells[1].inner_text().strip()
+
+                    # Skip completely empty rows
+                    if not label and not value:
+                        continue
+
+                    # Handle multi-line address continuation (label missing, value present)
+                    if not label and pending_label == 'property_address':
+                        auction_info['city'] = value
+                        continue
+
+                    key = label.lower().replace("#", "").replace(" ", "_") or "unknown_field"
+
+                    # Store field
+                    auction_info[key] = value
+                    pending_label = key  # for next row context
+
+                # Clean city, state, zip from combined field
+                if 'city' in auction_info:
+                    try:
+                        city_part = auction_info['city'].split(',')
+                        city = city_part[0].strip()
+                        state_zip = city_part[1].strip()
+                        state, zipcode = state_zip.split('-')
+                    except Exception:
+                        city, state, zipcode = auction_info['city'], 'FL', ''
+                    auction_info.update({
+                        'city': city,
+                        'state': state.strip(),
+                        'zipcode': zipcode.strip()
+                    })
+
+                auction_info['auction_date'] = auction_date
                 data.append(auction_info)
 
-        # close browser
         browser.close()
     return data
 
