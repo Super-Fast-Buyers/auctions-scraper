@@ -170,26 +170,103 @@ def get_data(urls: list):
                     pending_label = key  # for next row context
 
                 # Clean city, state, zip from combined field
-                if 'city' in auction_info:
+                if 'city' in auction_info and ('zip' not in auction_info or not auction_info['zip']):
                     try:
-                        city_part = auction_info['city'].split(',')
-                        city = city_part[0].strip()
-                        state_zip = city_part[1].strip()
-                        state, zipcode = state_zip.split('-')
+                        if ',' in auction_info['city']:
+                            city_part = auction_info['city'].split(',')
+                            city = city_part[0].strip()
+                            rest = city_part[1].strip()
+                            
+                            # Case: "CITY, STATE-ZIP" format
+                            if '-' in rest:
+                                state, zipcode = rest.split('-')
+                            # Case: "CITY, ZIP" format
+                            elif rest.isdigit() and len(rest) == 5:
+                                state = 'FL'  # Default state for Florida properties
+                                zipcode = rest
+                            # Case: "CITY, STATE ZIP" format
+                            else:
+                                # Try to extract state and ZIP if there's a space
+                                parts = rest.split()
+                                if len(parts) >= 2 and parts[-1].isdigit() and len(parts[-1]) == 5:
+                                    state = ' '.join(parts[:-1])
+                                    zipcode = parts[-1]
+                                else:
+                                    state = rest
+                                    zipcode = ''
+                        else:
+                            city, state, zipcode = auction_info['city'], 'FL', ''
                     except Exception:
                         city, state, zipcode = auction_info['city'], 'FL', ''
+                    
                     auction_info.update({
                         'city': city,
                         'state': state.strip(),
-                        'zipcode': zipcode.strip()
+                        'zip': zipcode.strip()
                     })
+                
+                # Extract location from property_address if ZIP still missing
+                if ('zip' not in auction_info or not auction_info['zip']) and 'property_address' in auction_info:
+                    address = auction_info['property_address']
+                    
+                    # Case: "BOYNTON BEACH, FL- 33437-7540"
+                    if ',' in address and '-' in address:
+                        try:
+                            city_part = address.split(',')
+                            city = city_part[0].strip()
+                            state_zip = city_part[1].strip()
+                            
+                            # Handle "FL- 33437-7540" format
+                            if '-' in state_zip:
+                                parts = state_zip.replace(' ', '').split('-')
+                                state = parts[0]
+                                # ZIP might be extended ZIP+4 format
+                                zipcode = parts[1] if len(parts) > 1 and parts[1] else ''
+                                
+                                auction_info.update({
+                                    'city': city,
+                                    'state': state,
+                                    'zip': zipcode
+                                })
+                        except Exception:
+                            pass
+                    
+                    # Case: "CORAL SPRINGS, 33065"
+                    elif ',' in address:
+                        try:
+                            parts = address.split(',')
+                            city = parts[0].strip()
+                            potential_zip = parts[1].strip()
+                            
+                            # Check if second part is just a ZIP code
+                            if potential_zip.isdigit() and len(potential_zip) == 5:
+                                auction_info.update({
+                                    'city': city,
+                                    'state': 'FL',  # Default to FL
+                                    'zip': potential_zip
+                                })
+                        except Exception:
+                            pass
+                    
+                    # Case: "1270 CHEYENNE CIR 32505" (ZIP at end)
+                    else:
+                        words = address.split()
+                        if words and words[-1].isdigit() and len(words[-1]) == 5:
+                            zipcode = words[-1]
+                            street_address = ' '.join(words[:-1])
+                            
+                            # Update auction_info with extracted data
+                            auction_info['zip'] = zipcode
+                            
+                            # If no street_address field exists, create it
+                            if 'street_address' not in auction_info:
+                                auction_info['street_address'] = street_address
 
                 auction_info['auction_date'] = auction_date
                 data.append(auction_info)
 
         browser.close()
     return data
-
 
 if __name__ == '__main__':
     pass

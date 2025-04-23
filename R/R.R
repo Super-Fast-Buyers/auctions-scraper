@@ -25,7 +25,7 @@ json2tbl <- function(json, category) {
         address = property_address,
         city,
         state,
-        zip = zipcode
+        zip = zip
       )
   } else { # TAXDEED
     data <- data %>% 
@@ -35,7 +35,7 @@ json2tbl <- function(json, category) {
         address = property_address,
         city,
         state,
-        zip = zipcode
+        zip = zip
       )
   }
   # filter invalid location data
