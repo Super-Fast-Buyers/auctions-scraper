@@ -1,6 +1,7 @@
 name: scraperv3
 
 on:
+  workflow_dispatch:
   schedule:
     - cron: '0 4 * * 2' # in the midnight Monday to Tuesday UTC-4 (Tuesday at 04.00 AM UTC)
     - cron: '0 4 * * 4' # Thursday
